@@ -1,0 +1,2160 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10251a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>手指竹音訓練｜MQTTGO</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06110b;
+      --panel: rgba(7, 18, 12, 0.78);
+      --ink: #f3fff6;
+      --muted: rgba(243, 255, 246, 0.72);
+      --accent: #82f7a7;
+      --warm: #ffd979;
+      --danger: #ff8d8d;
+      font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 20% 15%, rgba(130, 247, 167, 0.20), transparent 22rem),
+        radial-gradient(circle at 78% 82%, rgba(255, 217, 121, 0.14), transparent 26rem),
+        linear-gradient(145deg, #07110b, #0d2015 54%, #050a07);
+    }
+
+    button {
+      font: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      height: 100svh;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+      overflow: hidden;
+    }
+
+    .stage {
+      position: relative;
+      height: 100svh;
+      min-height: 0;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    #visualCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .topbar {
+      position: absolute;
+      left: max(18px, env(safe-area-inset-left));
+      right: 18px;
+      top: max(16px, env(safe-area-inset-top));
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      pointer-events: none;
+    }
+
+    .title {
+      display: grid;
+      gap: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 4.8vw, 56px);
+      letter-spacing: 0;
+      line-height: 1;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: clamp(15px, 2vw, 18px);
+    }
+
+    .gesture-card {
+      position: absolute;
+      left: max(18px, env(safe-area-inset-left));
+      bottom: max(18px, env(safe-area-inset-bottom));
+      z-index: 2;
+      width: min(430px, calc(100% - 36px));
+      padding: 18px;
+      border: 1px solid rgba(226, 255, 232, 0.18);
+      border-radius: 18px;
+      background: rgba(4, 12, 8, 0.58);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+    }
+
+    .gesture-name {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 5vw, 46px);
+      line-height: 1.05;
+    }
+
+    .gesture-help {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.6;
+    }
+
+    .camera-box {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      z-index: 2;
+      width: min(280px, 32vw);
+      aspect-ratio: 4 / 3;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(226, 255, 232, 0.20);
+      background: #050805;
+      box-shadow: 0 18px 52px rgba(0, 0, 0, 0.32);
+    }
+
+    .camera-box video,
+    .camera-box canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .side {
+      height: 100svh;
+      min-height: 0;
+      padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+      display: grid;
+      align-content: start;
+      gap: 14px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      border-left: 1px solid rgba(226, 255, 232, 0.14);
+      background: rgba(4, 10, 7, 0.70);
+      backdrop-filter: blur(16px);
+      z-index: 3;
+    }
+
+    .panel {
+      border: 1px solid rgba(226, 255, 232, 0.14);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 14px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.20);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 19px;
+    }
+
+    .primary {
+      width: 100%;
+      min-height: 64px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #76f7a0, #d9ff9f);
+      color: #08220f;
+      font-size: 22px;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 14px 34px rgba(130, 247, 167, 0.26);
+    }
+
+    .primary.running {
+      background: linear-gradient(135deg, #ffd979, #fff2b8);
+      color: #2b1f00;
+    }
+
+    .modes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .mode {
+      min-height: 58px;
+      border: 1px solid rgba(226, 255, 232, 0.15);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    .mode.active {
+      border-color: var(--accent);
+      background: rgba(130, 247, 167, 0.16);
+      box-shadow: 0 0 18px rgba(130, 247, 167, 0.20);
+    }
+
+    .status {
+      margin: 10px 0 0;
+      min-height: 54px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .meter {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meter-row {
+      display: grid;
+      grid-template-columns: 74px 1fr 46px;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .bar {
+      height: 14px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--warm));
+      transition: width 0.18s ease;
+    }
+
+    .gesture-status-panel {
+      overflow: hidden;
+    }
+
+    .gesture-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .gesture-tile {
+      min-height: 86px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 5px;
+      padding: 8px 4px;
+      border-radius: 14px;
+      border: 1px solid rgba(226, 255, 232, 0.13);
+      background: rgba(255, 255, 255, 0.035);
+      filter: grayscale(1);
+      opacity: 0.42;
+      transform: scale(0.98);
+      transition: filter 0.22s ease, opacity 0.22s ease, transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .gesture-tile.active {
+      filter: grayscale(0);
+      opacity: 1;
+      transform: scale(1.04);
+      border-color: var(--tile-color, var(--accent));
+      background: color-mix(in srgb, var(--tile-color, var(--accent)) 20%, rgba(255,255,255,0.05));
+      box-shadow: 0 0 24px color-mix(in srgb, var(--tile-color, var(--accent)) 42%, transparent);
+    }
+
+    .gesture-tile-icon {
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .gesture-tile-label {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .gesture-tile-note {
+      color: var(--tile-color, var(--warm));
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: 0.02em;
+    }
+
+    .gesture-tile-pitch {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .gesture-grid-status {
+      margin-top: 10px;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .mqtt-grid {
+      display: grid;
+      gap: 9px;
+    }
+
+    .mqtt-field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .mqtt-field label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .mqtt-field input {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 11px;
+      border: 1px solid rgba(226, 255, 232, 0.16);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .mqtt-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .mqtt-button {
+      min-height: 44px;
+      border: 1px solid rgba(226, 255, 232, 0.18);
+      border-radius: 11px;
+      background: rgba(130, 247, 167, 0.12);
+      color: var(--ink);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .mqtt-button.secondary {
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .mqtt-status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .mqtt-dot {
+      width: 11px;
+      height: 11px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #8a8f8c;
+      box-shadow: 0 0 0 4px rgba(138, 143, 140, 0.12);
+    }
+
+    .mqtt-dot.connecting {
+      background: var(--warm);
+      box-shadow: 0 0 0 4px rgba(255, 217, 121, 0.13);
+    }
+
+    .mqtt-dot.connected {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(130, 247, 167, 0.14);
+    }
+
+    .mqtt-dot.error {
+      background: var(--danger);
+      box-shadow: 0 0 0 4px rgba(255, 141, 141, 0.14);
+    }
+
+    .mqtt-stats {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+
+    .exercise {
+      display: grid;
+      gap: 10px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--muted);
+    }
+
+    .step strong {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(130, 247, 167, 0.14);
+      color: var(--ink);
+    }
+
+    .step.done {
+      color: var(--ink);
+      background: rgba(130, 247, 167, 0.16);
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 980px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        height: auto;
+        min-height: 100svh;
+        grid-template-columns: 1fr;
+        overflow: visible;
+      }
+
+      .side {
+        height: auto;
+        min-height: auto;
+        overflow: visible;
+        border-left: 0;
+        border-top: 1px solid rgba(226, 255, 232, 0.14);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stage {
+        height: 62svh;
+        min-height: 62svh;
+      }
+
+      .camera-box {
+        width: min(240px, 36vw);
+      }
+    }
+
+    @media (max-width: 680px) {
+      .side {
+        grid-template-columns: 1fr;
+      }
+
+      .camera-box {
+        width: 150px;
+        right: 12px;
+        bottom: 12px;
+      }
+
+      .gesture-card {
+        padding: 14px;
+      }
+
+      .modes {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="stage" aria-label="手指竹音互動畫面">
+      <canvas id="visualCanvas"></canvas>
+      <div class="topbar">
+        <div class="title">
+          <h1>手指竹音訓練</h1>
+          <div class="subtitle">九種手勢，讓聲音和光一起回應</div>
+        </div>
+      </div>
+
+      <div class="gesture-card">
+        <p class="gesture-name" id="gestureName">準備開始</p>
+        <p class="gesture-help" id="gestureHelp">請把平板架好，手放在鏡頭前方，再按下開始。</p>
+      </div>
+
+      <div class="camera-box">
+        <video id="cameraVideo" playsinline muted></video>
+        <canvas id="handCanvas"></canvas>
+      </div>
+    </section>
+
+    <aside class="side" aria-label="平板控制面板">
+      <section class="panel">
+        <h2>開始</h2>
+        <button id="startBtn" class="primary" type="button">開始互動</button>
+        <p id="statusText" class="status">iPad / Android 平板請使用 HTTPS 網址開啟，並允許攝影機權限。</p>
+      </section>
+
+      <section class="panel">
+        <h2>Wi-Fi／MQTT 燈板</h2>
+        <div class="mqtt-grid">
+          <div class="mqtt-field">
+            <label for="mqttUrl">Broker WSS 網址</label>
+            <input id="mqttUrl" type="url" inputmode="url" autocomplete="off"
+              value="wss://mqttgo.io:8084">
+          </div>
+          <div class="mqtt-field">
+            <label for="mqttTopicBase">Topic 基底</label>
+            <input id="mqttTopicBase" type="text" autocomplete="off"
+              value="/user/lester47/bamboo">
+          </div>
+          <div class="mqtt-field">
+            <label for="mqttUsername">帳號（沒有可留白）</label>
+            <input id="mqttUsername" type="text" autocomplete="username">
+          </div>
+          <div class="mqtt-field">
+            <label for="mqttPassword">密碼（沒有可留白）</label>
+            <input id="mqttPassword" type="password" autocomplete="current-password">
+          </div>
+          <div class="mqtt-actions">
+            <button id="mqttConnectBtn" class="mqtt-button" type="button">連接 MQTT</button>
+            <button id="mqttTestBtn" class="mqtt-button" type="button">測試 MQTT</button>
+            <button id="mqttDisconnectBtn" class="mqtt-button secondary" type="button">中斷</button>
+          </div>
+        </div>
+        <div class="mqtt-status-row">
+          <span id="mqttStatusDot" class="mqtt-dot"></span>
+          <strong id="mqttStatusText">尚未連線</strong>
+        </div>
+        <div id="mqttStats" class="mqtt-stats">手勢事件：0　頻譜封包：0</div>
+      </section>
+
+
+      <section class="panel">
+        <h2>訓練模式</h2>
+        <div class="modes">
+          <button class="mode active" type="button" data-mode="free">自由<br>互動</button>
+          <button class="mode" type="button" data-mode="openclose">握拳<br>張手</button>
+          <button class="mode" type="button" data-mode="pinch">指尖<br>捏合</button>
+        </div>
+      </section>
+
+      <section class="panel gesture-status-panel">
+        <h2>九宮格音階手勢</h2>
+        <div class="gesture-grid" id="gestureGrid" aria-live="polite">
+          <div class="gesture-tile" data-gesture-tile="point"><div class="gesture-tile-icon">☝️</div><div class="gesture-tile-note">1　Do</div><div class="gesture-tile-label">食指單指</div><div class="gesture-tile-pitch">C4</div></div>
+          <div class="gesture-tile" data-gesture-tile="victory"><div class="gesture-tile-icon">✌️</div><div class="gesture-tile-note">2　Re</div><div class="gesture-tile-label">勝利 V</div><div class="gesture-tile-pitch">D4</div></div>
+          <div class="gesture-tile" data-gesture-tile="three"><div class="gesture-tile-icon">3️⃣</div><div class="gesture-tile-note">3　Mi</div><div class="gesture-tile-label">三指手勢</div><div class="gesture-tile-pitch">E4</div></div>
+          <div class="gesture-tile" data-gesture-tile="rock"><div class="gesture-tile-icon">🤘</div><div class="gesture-tile-note">4　Fa</div><div class="gesture-tile-label">搖滾手勢</div><div class="gesture-tile-pitch">F4</div></div>
+          <div class="gesture-tile" data-gesture-tile="open"><div class="gesture-tile-icon">✋</div><div class="gesture-tile-note">5　Sol</div><div class="gesture-tile-label">張開手掌</div><div class="gesture-tile-pitch">G4</div></div>
+          <div class="gesture-tile" data-gesture-tile="fist"><div class="gesture-tile-icon">✊</div><div class="gesture-tile-note">6　La</div><div class="gesture-tile-label">握拳</div><div class="gesture-tile-pitch">A4</div></div>
+          <div class="gesture-tile" data-gesture-tile="pinch"><div class="gesture-tile-icon">🤏</div><div class="gesture-tile-note">7　Si</div><div class="gesture-tile-label">捏合</div><div class="gesture-tile-pitch">B4</div></div>
+          <div class="gesture-tile" data-gesture-tile="thumbsUp"><div class="gesture-tile-icon">👍</div><div class="gesture-tile-note">1̇　高音 Do</div><div class="gesture-tile-label">拇指讚</div><div class="gesture-tile-pitch">C5</div></div>
+          <div class="gesture-tile" data-gesture-tile="pinky"><div class="gesture-tile-icon">🤙</div><div class="gesture-tile-note">2̇　高音 Re</div><div class="gesture-tile-label">小指手勢</div><div class="gesture-tile-pitch">D5</div></div>
+        </div>
+        <div class="gesture-grid-status" id="gestureGridStatus">尚未開始</div>
+      </section>
+
+      <section class="panel">
+        <h2>練習流程</h2>
+        <div class="exercise">
+          <div class="step" id="stepFist"><strong>1</strong><span>慢慢握拳</span></div>
+          <div class="step" id="stepOpen"><strong>2</strong><span>慢慢張開手掌</span></div>
+          <div class="step" id="stepPinch"><strong>3</strong><span>拇指碰食指</span></div>
+        </div>
+        <p class="hint">目前支援九種手勢；同一手勢不會重複爆發，變換手勢時會產生新的音樂回應。</p>
+      </section>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    const visualCanvas = document.querySelector("#visualCanvas");
+    const vctx = visualCanvas.getContext("2d");
+    const cameraVideo = document.querySelector("#cameraVideo");
+    const handCanvas = document.querySelector("#handCanvas");
+    const hctx = handCanvas.getContext("2d");
+    const startBtn = document.querySelector("#startBtn");
+    const statusText = document.querySelector("#statusText");
+    const gestureName = document.querySelector("#gestureName");
+    const gestureHelp = document.querySelector("#gestureHelp");
+    const gestureTiles = [...document.querySelectorAll("[data-gesture-tile]")];
+    const gestureGridStatus = document.querySelector("#gestureGridStatus");
+    const mqttUrlInput = document.querySelector("#mqttUrl");
+    const mqttTopicBaseInput = document.querySelector("#mqttTopicBase");
+    const mqttUsernameInput = document.querySelector("#mqttUsername");
+    const mqttPasswordInput = document.querySelector("#mqttPassword");
+    const mqttConnectBtn = document.querySelector("#mqttConnectBtn");
+    const mqttTestBtn = document.querySelector("#mqttTestBtn");
+    const mqttDisconnectBtn = document.querySelector("#mqttDisconnectBtn");
+    const mqttStatusDot = document.querySelector("#mqttStatusDot");
+    const mqttStatusText = document.querySelector("#mqttStatusText");
+    const mqttStats = document.querySelector("#mqttStats");
+
+    const handConnections = [
+      [0, 1], [1, 2], [2, 3], [3, 4],
+      [0, 5], [5, 6], [6, 7], [7, 8],
+      [0, 9], [9, 10], [10, 11], [11, 12],
+      [0, 13], [13, 14], [14, 15], [15, 16],
+      [0, 17], [17, 18], [18, 19], [19, 20],
+      [5, 9], [9, 13], [13, 17]
+    ];
+
+    let audioCtx;
+    let masterGain;
+    let glassBus;
+    let glassField;
+    let delayNode;
+    let feedbackGain;
+    let audioAnalyser;
+    let analyserFrequencyData;
+    let hands;
+    let camera;
+    let running = false;
+    let dpr = 1;
+    let width = 0;
+    let height = 0;
+    let activeMode = "free";
+    let lastGesture = "";
+    let currentGesture = "";
+    let lastTriggerTime = 0;
+    let repeatGestureArmed = true;
+    let repeatMotionWasHigh = false;
+    let lastTip = null;
+    let stableFrames = 0;
+    let particles = [];
+    let rings = [];
+    let exerciseDone = { fist: false, open: false, pinch: false };
+    let melodyStep = 0;
+    const melodyScale = [0, 2, 4, 7, 9, 11, 14, 16, 19, 21];
+    const gestureMelody = {
+      point: { root: 261.63, steps: [0, 2, 4], motion: 1 },       // 1 Do / C4
+      victory: { root: 293.66, steps: [0, 2, 4], motion: 1 },     // 2 Re / D4
+      three: { root: 329.63, steps: [0, 2, 4], motion: 1 },       // 3 Mi / E4
+      rock: { root: 349.23, steps: [0, 2, 4], motion: 1 },        // 4 Fa / F4
+      open: { root: 392.00, steps: [0, 2, 4], motion: 1 },        // 5 Sol / G4
+      fist: { root: 440.00, steps: [0, 2, 4], motion: 1 },        // 6 La / A4
+      pinch: { root: 493.88, steps: [0, 2, 4], motion: 1 },       // 7 Si / B4
+      thumbsUp: { root: 523.25, steps: [0, 2, 4], motion: 1 },    // 1̇ 高音 Do / C5
+      pinky: { root: 587.33, steps: [0, 2, 4], motion: 1 }        // 2̇ 高音 Re / D5
+    };
+
+    const gestureSoundProfile = {
+      open:     { transpose: 0, pace: 0.105, duration: 1.10, brightness: 1.18, droplets: 14, sweep: "up", chord: [0, 7, 12, 16] },
+      fist:     { transpose: 0, pace: 0.145, duration: 0.72, brightness: 0.58, droplets: 3, sweep: "down", chord: [0, 3, 7] },
+      pinch:    { transpose: 0, pace: 0.075, duration: 0.48, brightness: 1.55, droplets: 7, sweep: "spark", chord: [0, 12, 24] },
+      point:    { transpose: 0, pace: 0.125, duration: 0.82, brightness: 1.02, droplets: 5, sweep: "pulse", chord: [0, 7, 14] },
+      victory:  { transpose: 0, pace: 0.090, duration: 0.95, brightness: 1.30, droplets: 10, sweep: "rise", chord: [0, 4, 7, 11] },
+      three:    { transpose: 0, pace: 0.112, duration: 1.20, brightness: 0.92, droplets: 8, sweep: "wave", chord: [0, 5, 9, 14] },
+      rock:     { transpose: 0, pace: 0.070, duration: 0.66, brightness: 1.42, droplets: 4, sweep: "zigzag", chord: [0, 7, 10, 19] },
+      pinky:    { transpose: 0, pace: 0.165, duration: 1.35, brightness: 1.70, droplets: 2, sweep: "fall", chord: [0, 12, 17] },
+      thumbsUp: { transpose: 0, pace: 0.120, duration: 1.45, brightness: 0.82, droplets: 6, sweep: "hero", chord: [0, 5, 9, 12] }
+    };
+
+    const gestureInfo = {
+      point: { label: "1 Do｜食指單指", help: "只伸出食指，發出 Do。", color: "#d8b4ff", note: 261.63, notation: "1 Do", pitch: "C4" },
+      victory: { label: "2 Re｜勝利 V", help: "伸出食指和中指，發出 Re。", color: "#ff9fd2", note: 293.66, notation: "2 Re", pitch: "D4" },
+      three: { label: "3 Mi｜三指手勢", help: "伸出食指、中指和無名指，發出 Mi。", color: "#8ee7ff", note: 329.63, notation: "3 Mi", pitch: "E4" },
+      rock: { label: "4 Fa｜搖滾手勢", help: "伸出食指和小指，發出 Fa。", color: "#ff927d", note: 349.23, notation: "4 Fa", pitch: "F4" },
+      open: { label: "5 Sol｜張開手掌", help: "五指自然張開，發出 Sol。", color: "#82f7a7", note: 392.00, notation: "5 Sol", pitch: "G4" },
+      fist: { label: "6 La｜握拳", help: "四指與拇指慢慢收起，發出 La。", color: "#ffd979", note: 440.00, notation: "6 La", pitch: "A4" },
+      pinch: { label: "7 Si｜捏合", help: "拇指和食指輕輕碰在一起，發出 Si。", color: "#9ed8ff", note: 493.88, notation: "7 Si", pitch: "B4" },
+      thumbsUp: { label: "1̇ 高音 Do｜拇指讚", help: "四指收起、拇指向上，發出高音 Do。", color: "#fff08a", note: 523.25, notation: "1̇ 高音 Do", pitch: "C5" },
+      pinky: { label: "2̇ 高音 Re｜小指手勢", help: "只伸出小指，發出高音 Re。", color: "#c6a6ff", note: 587.33, notation: "2̇ 高音 Re", pitch: "D5" },
+      rest: { label: "請把手放入畫面", help: "手掌靠近鏡頭一點，讓平板看見。", color: "#82f7a7", note: 220.00 }
+    };
+
+    const gestureIcons = {
+      open: "✋",
+      fist: "✊",
+      pinch: "🤏",
+      point: "☝️",
+      victory: "✌️",
+      three: "3️⃣",
+      rock: "🤘",
+      pinky: "🤙",
+      thumbsUp: "👍",
+      tracking: "⌛",
+      rest: "📷"
+    };
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = visualCanvas.getBoundingClientRect();
+      width = Math.max(1, Math.floor(rect.width * dpr));
+      height = Math.max(1, Math.floor(rect.height * dpr));
+      visualCanvas.width = width;
+      visualCanvas.height = height;
+    }
+
+    function setupAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      glassBus = audioCtx.createGain();
+      delayNode = audioCtx.createDelay(1.2);
+      feedbackGain = audioCtx.createGain();
+      const wetGain = audioCtx.createGain();
+      audioAnalyser = audioCtx.createAnalyser();
+      audioAnalyser.fftSize = 1024;
+      audioAnalyser.smoothingTimeConstant = 0.72;
+      analyserFrequencyData = new Uint8Array(audioAnalyser.frequencyBinCount);
+
+      masterGain.gain.value = 0.78;
+      glassBus.gain.value = 1.0;
+      delayNode.delayTime.value = 0.34;
+      feedbackGain.gain.value = 0.32;
+      wetGain.gain.value = 0.34;
+      delayNode.connect(feedbackGain).connect(delayNode);
+      delayNode.connect(wetGain).connect(audioCtx.destination);
+      glassBus.connect(masterGain);
+      glassBus.connect(delayNode);
+      masterGain.connect(audioCtx.destination);
+      masterGain.connect(delayNode);
+      // 分析器以旁路方式讀取總聲音，不改變原本音效輸出。
+      masterGain.connect(audioAnalyser);
+      setupGlassField();
+
+      // 若使用者先連上 MQTT、後啟動音訊，這裡會補啟動頻譜傳送。
+      if (mqttClient?.connected) {
+        startMqttSpectrumLoop();
+      }
+    }
+
+    function setupGlassField() {
+      if (glassField || !audioCtx) return;
+      const fieldGain = audioCtx.createGain();
+      const ratios = [0.5, 1, 1.5, 2.25, 3.0];
+      const voices = ratios.map((ratio, index) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        osc.type = index % 2 ? "triangle" : "sine";
+        osc.frequency.value = 220 * ratio;
+        filter.type = "bandpass";
+        filter.frequency.value = 220 * ratio;
+        filter.Q.value = 18 + index * 6;
+        gain.gain.value = 0.0001;
+        osc.connect(filter).connect(gain).connect(fieldGain);
+        osc.start();
+        return { osc, gain, filter, ratio, phase: Math.random() * Math.PI * 2 };
+      });
+
+      const shimmer = audioCtx.createBufferSource();
+      const shimmerGain = audioCtx.createGain();
+      const shimmerFilter = audioCtx.createBiquadFilter();
+      const length = Math.floor(audioCtx.sampleRate * 2);
+      const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+      shimmer.buffer = buffer;
+      shimmer.loop = true;
+      shimmerFilter.type = "highpass";
+      shimmerFilter.frequency.value = 3600;
+      shimmerGain.gain.value = 0.0001;
+      shimmer.connect(shimmerFilter).connect(shimmerGain).connect(fieldGain);
+      shimmer.start();
+
+      fieldGain.gain.value = 0.0001;
+      fieldGain.connect(glassBus);
+      glassField = { fieldGain, voices, shimmerGain, shimmerFilter, base: 220 };
+    }
+
+    function updateGlassField(gesture, metrics) {
+      if (!glassField || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      if (!gesture || !metrics) {
+        glassField.fieldGain.gain.setTargetAtTime(0.0001, now, 0.45);
+        glassField.voices.forEach((voice) => voice.gain.gain.setTargetAtTime(0.0001, now, 0.35));
+        glassField.shimmerGain.gain.setTargetAtTime(0.0001, now, 0.35);
+        return;
+      }
+
+      const info = gestureInfo[gesture] || gestureInfo.point;
+      const base = info.note;
+      const energy = Math.max(0.08, metrics.open * 0.44 + metrics.move * 0.40 + metrics.stable * 0.18);
+      glassField.fieldGain.gain.setTargetAtTime(Math.min(0.32, 0.055 + energy * 0.18), now, 0.20);
+      glassField.shimmerFilter.frequency.setTargetAtTime(2900 + metrics.open * 3000 + metrics.move * 2200, now, 0.18);
+      glassField.shimmerGain.gain.setTargetAtTime(0.010 + metrics.move * 0.050 + metrics.open * 0.020, now, 0.24);
+
+      glassField.voices.forEach((voice, index) => {
+        const drift = Math.sin(now * (0.3 + index * 0.11) + voice.phase) * (0.006 + metrics.move * 0.018);
+        const freq = Math.min(6200, Math.max(70, base * voice.ratio * (1 + drift)));
+        voice.osc.frequency.setTargetAtTime(freq, now, 0.18);
+        voice.filter.frequency.setTargetAtTime(freq * (1 + index * 0.012), now, 0.18);
+        voice.filter.Q.setTargetAtTime(16 + metrics.stable * 26 + index * 5, now, 0.20);
+        voice.gain.gain.setTargetAtTime((0.010 + energy * 0.026) * Math.max(0.28, 1 - index * 0.12), now, 0.24);
+      });
+    }
+
+    function playGestureSound(gesture, metrics) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const info = gestureInfo[gesture] || gestureInfo.rest;
+      const base = info.note;
+      const volume = Math.min(0.34, 0.105 + metrics.open * 0.105 + metrics.move * 0.090 + metrics.stable * 0.040);
+
+      const profile = gestureSoundProfile[gesture] || gestureSoundProfile.point;
+      const shiftedBase = base * Math.pow(2, profile.transpose / 12);
+
+      playGlassBell(now, shiftedBase, profile.duration + metrics.stable * 0.55, volume * 0.78, metrics);
+      playGlassMusicPhrase(now + 0.025, gesture, metrics, volume * 0.90);
+      playGestureSignature(now + 0.045, gesture, shiftedBase, metrics, volume, profile);
+      playOriginalGlassEffects(now, gesture, shiftedBase, metrics, volume * 0.78);
+      playGestureSweep(now + 0.03, shiftedBase, volume, profile.sweep);
+    }
+
+    function playGestureSignature(start, gesture, base, metrics, volume, profile) {
+      profile.chord.forEach((semitone, index) => {
+        const freq = base * Math.pow(2, semitone / 12);
+        const level = volume * Math.max(0.10, 0.42 - index * 0.055);
+        playGlassTone(start + index * profile.pace, freq, profile.duration * (1 - index * 0.08), level, index, 12 + profile.brightness * 16);
+      });
+
+      if (profile.droplets > 0) {
+        playDroplets(glassBus, start + 0.035, { move: metrics.move, open: metrics.open }, base * (1.8 + profile.brightness), profile.droplets, 0.014 + volume * 0.05);
+      }
+
+      // 各手勢專屬質地：低沉、閃爍、脈衝、勝利和弦、鋸齒與英雄式上行。
+      if (gesture === "fist") {
+        playNoiseBurst(glassBus, start, 0.34, 620, volume * 0.16, "lowpass", 5);
+      } else if (gesture === "pinch") {
+        playNoiseBurst(glassBus, start, 0.10, 7600, volume * 0.18, "highpass", 22);
+      } else if (gesture === "point") {
+        [0, 0.16, 0.32].forEach((offset, i) => playGlassTone(start + offset, base * (1 + i * 0.25), 0.30, volume * 0.20, i, 28));
+      } else if (gesture === "victory") {
+        playResonantCluster(glassBus, start, base, [1, 1.25, 1.5, 2], 1.65, "sine", volume * 0.14, 30);
+      } else if (gesture === "three") {
+        playResonantCluster(glassBus, start, base * 0.72, [1, 1.5, 2.25, 3.0], 2.2, "triangle", volume * 0.10, 18);
+      } else if (gesture === "rock") {
+        [0, 0.08, 0.16, 0.24].forEach((offset, i) => playToneSweep(glassBus, start + offset, base * (i % 2 ? 2.4 : 0.8), base * (i % 2 ? 0.7 : 2.8), 0.18, "sawtooth", volume * 0.08));
+      } else if (gesture === "pinky") {
+        playGlassTone(start, base * 2.02, 1.7, volume * 0.18, 4, 42);
+      } else if (gesture === "thumbsUp") {
+        [0, 4, 7, 12].forEach((semi, i) => playGlassTone(start + i * 0.14, base * Math.pow(2, semi / 12), 1.3, volume * 0.20, i, 24));
+      }
+    }
+
+    function playGestureSweep(start, base, volume, type) {
+      const sweeps = {
+        up: [base * 0.55, base * 2.3, 1.35],
+        down: [base * 1.8, base * 0.42, 0.90],
+        spark: [base * 3.2, base * 1.2, 0.42],
+        pulse: [base * 0.9, base * 1.35, 0.36],
+        rise: [base * 0.72, base * 2.0, 1.05],
+        wave: [base * 0.82, base * 1.45, 1.60],
+        zigzag: [base * 2.5, base * 0.58, 0.48],
+        fall: [base * 2.8, base * 0.75, 1.55],
+        hero: [base * 0.62, base * 1.85, 1.75]
+      };
+      const [from, to, duration] = sweeps[type] || sweeps.pulse;
+      playGlassSweep(start, from, to, duration, volume * 0.30);
+    }
+
+    function playOriginalGlassEffects(now, gesture, base, metrics, volume) {
+      const energy = Math.max(0.18, metrics.open * 0.58 + metrics.move * 0.42);
+      const bright = Math.max(0.28, metrics.stable * 0.38 + metrics.move * 0.46 + (gesture === "pinch" ? 0.42 : 0));
+      const echo = Math.max(0.30, metrics.stable * 0.54 + (gesture === "open" ? 0.24 : 0));
+      const grit = Math.max(0.12, metrics.move * 0.52 + (gesture === "fist" ? 0.18 : 0));
+
+      playNoiseBurst(glassBus, now, 0.16 + echo * 0.20, 3200 + bright * 5200, 0.020 + bright * 0.030 + volume * 0.16, "highpass", 4 + bright * 14);
+      playNoiseBurst(glassBus, now + 0.04, 0.42 + echo * 0.44, 900 + bright * 2600, 0.018 + volume * 0.13, "bandpass", 2 + bright * 8);
+      playResonantCluster(glassBus, now + 0.012, base * 1.35, [1.00, 1.37, 2.11, 2.96, 4.17, 5.82, 7.40], 1.90 + echo * 2.8, "sine", 0.030 + energy * 0.052, 24 + bright * 40);
+      playResonantCluster(glassBus, now + 0.08, base * 0.72, [0.50, 1.00, 1.50, 2.33, 3.71], 2.10 + echo * 2.0, "triangle", 0.016 + volume * 0.16, 14 + bright * 24);
+      playDroplets(glassBus, now + 0.035, { move: metrics.move, open: metrics.open }, base * 2.9, 10 + Math.floor(bright * 12), 0.018 + bright * 0.034 + volume * 0.045);
+      playGlassGrainSpray(glassBus, now, base, metrics, grit, bright);
+    }
+
+    function playGlassArpeggio(start, gesture, base, metrics, volume) {
+      const shapes = {
+        fist: [7, 4, 2, 0, -3],
+        open: [0, 2, 4, 7, 9, 12],
+        pinch: [12, 9, 14, 7, 16],
+        point: [0, 4, 2, 7, 11],
+        victory: [0, 4, 7, 11, 14],
+        three: [0, 2, 5, 9, 12],
+        rock: [0, 7, 3, 10, 15],
+        pinky: [12, 9, 7, 4, 0],
+        thumbsUp: [0, 5, 9, 12, 17]
+      };
+      const shape = shapes[gesture] || shapes.point;
+      const pace = 0.070 + metrics.stable * 0.030;
+      shape.forEach((degree, index) => {
+        const freq = base * Math.pow(2, degree / 12);
+        const gain = volume * Math.max(0.10, 0.46 - index * 0.045);
+        playGlassTone(start + index * pace, freq, 0.72 + metrics.stable * 0.35, gain, index, 18);
+        if (index % 2 === 0) {
+          playGlassTone(start + index * pace + 0.018, freq * 2.01, 0.42, gain * 0.26, index + 3, 26);
+        }
+      });
+    }
+
+    function playGlassMusicPhrase(start, gesture, metrics, volume) {
+      const profile = gestureMelody[gesture];
+      if (!profile) return;
+      const phrase = profile.steps;
+      const lift = metrics.open > 0.68 ? 1 : 0;
+      const pace = 0.12 + metrics.stable * 0.055;
+      phrase.forEach((stepOffset, index) => {
+        const scaleIndex = (melodyStep + stepOffset + lift) % melodyScale.length;
+        const freq = noteFromScale(profile.root, scaleIndex);
+        const level = volume * (0.54 - index * 0.065);
+        const duration = 0.68 + metrics.stable * 0.38 - index * 0.055;
+        playGlassTone(start + index * pace, freq, duration, Math.max(0.010, level), index);
+      });
+      melodyStep = (melodyStep + profile.motion + melodyScale.length) % melodyScale.length;
+    }
+
+    function playSuccessPhrase() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      [0, 2, 4, 7, 9, 11].forEach((scaleIndex, index) => {
+        playGlassTone(now + index * 0.105, noteFromScale(220, scaleIndex), 0.82 - index * 0.035, 0.044 - index * 0.003, index);
+      });
+    }
+
+    function noteFromScale(root, scaleIndex) {
+      const semitone = melodyScale[scaleIndex % melodyScale.length];
+      const octave = Math.floor(scaleIndex / melodyScale.length);
+      return root * Math.pow(2, (semitone + octave * 12) / 12);
+    }
+
+    function playNoiseBurst(bus, start, duration, frequency, gainValue, filterType, q) {
+      const noise = audioCtx.createBufferSource();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const buffer = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * duration), audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.45);
+      }
+      noise.buffer = buffer;
+      filter.type = filterType;
+      filter.frequency.setValueAtTime(Math.min(9800, Math.max(70, frequency)), start);
+      filter.Q.setValueAtTime(q, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      noise.connect(filter).connect(gain).connect(bus);
+      noise.start(start);
+      noise.stop(start + duration + 0.04);
+    }
+
+    function playResonantCluster(bus, start, fundamental, ratios, duration, type, gainValue, q) {
+      ratios.forEach((ratio, index) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        const pan = audioCtx.createStereoPanner();
+        const offset = Math.random() * (0.035 + index * 0.008);
+        const begin = start + offset;
+        const freq = Math.min(9800, Math.max(55, fundamental * ratio * (0.986 + Math.random() * 0.032)));
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, begin);
+        osc.detune.setValueAtTime(-8 + Math.random() * 16, begin);
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(freq, begin);
+        filter.Q.setValueAtTime(q + index * 3, begin);
+        pan.pan.setValueAtTime(Math.max(-0.62, Math.min(0.62, (index - ratios.length / 2) * 0.18)), begin);
+        gain.gain.setValueAtTime(0.0001, begin);
+        gain.gain.exponentialRampToValueAtTime(gainValue * Math.max(0.16, 1 - index * 0.12), begin + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, begin + duration * (0.72 + Math.random() * 0.53));
+        osc.connect(filter).connect(pan).connect(gain).connect(bus);
+        osc.start(begin);
+        osc.stop(begin + duration * 1.35);
+      });
+    }
+
+    function playGlassGrainSpray(bus, now, base, metrics, grit, bright) {
+      const count = Math.floor(6 + grit * 16 + metrics.move * 8 + metrics.open * 5);
+      for (let i = 0; i < count; i += 1) {
+        const start = now + 0.002 + Math.random() * (0.18 + metrics.move * 0.14);
+        const duration = 0.018 + Math.random() * (0.07 + grit * 0.05);
+        const freq = base * (1.8 + Math.random() * (8.0 + bright * 8.0));
+        playNoiseBurst(
+          bus,
+          start,
+          duration,
+          freq,
+          (0.0035 + grit * 0.012 + metrics.open * 0.010) * (1 - i / Math.max(1, count) * 0.35),
+          "bandpass",
+          8 + grit * 20 + Math.random() * 14
+        );
+      }
+    }
+
+    function playDroplets(bus, now, record, base, count, gainValue) {
+      for (let i = 0; i < count; i += 1) {
+        const start = now + 0.02 + Math.random() * 0.58 + i * (0.006 + Math.random() * 0.035);
+        const freq = Math.min(8200, Math.max(420, base * (0.72 + Math.random() * 2.08) * (1 + record.move * 0.24)));
+        playToneSweep(bus, start, freq, freq * (0.28 + Math.random() * 0.42), 0.055 + Math.random() * 0.13, "sine", gainValue * (1 - i * 0.055));
+      }
+    }
+
+    function playToneSweep(bus, start, startFreq, endFreq, duration, type, gainValue) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      osc.type = type;
+      osc.frequency.setValueAtTime(Math.min(9000, Math.max(60, startFreq)), start);
+      osc.frequency.exponentialRampToValueAtTime(Math.min(9500, Math.max(50, endFreq)), start + duration);
+      osc.detune.setValueAtTime(-18 + Math.random() * 36, start);
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(Math.min(8500, Math.max(120, startFreq)), start);
+      filter.frequency.exponentialRampToValueAtTime(Math.min(9000, Math.max(120, endFreq * 1.12)), start + duration);
+      filter.Q.setValueAtTime(5 + Math.random() * 18, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(filter).connect(gain).connect(bus);
+      osc.start(start);
+      osc.stop(start + duration + 0.05);
+    }
+
+    function playGlassBell(start, freq, duration, level, metrics) {
+      const ratios = [1, 2.01, 2.72, 3.91, 5.43];
+      ratios.forEach((ratio, index) => {
+        playGlassTone(
+          start + index * 0.012,
+          freq * ratio,
+          duration * (1.08 - index * 0.09),
+          level * Math.max(0.13, 1 - index * 0.19),
+          index,
+          18 + metrics.stable * 20
+        );
+      });
+      playGlassNoise(start + 0.012, freq * 3.4, 0.18 + metrics.move * 0.12, level * 0.18);
+    }
+
+    function playGlassTone(start, freq, duration, level, index = 0, qBoost = 0) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const pan = audioCtx.createStereoPanner();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(Math.min(7200, Math.max(80, freq)), start);
+      osc.detune.setValueAtTime((index - 2) * 3 + (Math.random() * 8 - 4), start);
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(Math.min(7800, Math.max(160, freq * (1 + index * 0.006))), start);
+      filter.Q.setValueAtTime(18 + qBoost + index * 5, start);
+      pan.pan.setValueAtTime(Math.max(-0.55, Math.min(0.55, (index - 2) * 0.16)), start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(level, start + 0.018);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.16), start + duration * 0.42);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(filter).connect(pan).connect(gain).connect(glassBus);
+      osc.start(start);
+      osc.stop(start + duration + 0.05);
+    }
+
+    function playGlassNoise(start, freq, duration, level) {
+      const source = audioCtx.createBufferSource();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const length = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+      const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i += 1) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.3);
+      }
+      source.buffer = buffer;
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(Math.min(8200, Math.max(420, freq)), start);
+      filter.Q.setValueAtTime(12, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(level, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      source.connect(filter).connect(gain).connect(glassBus);
+      source.start(start);
+      source.stop(start + duration + 0.05);
+    }
+
+    function playGlassSweep(start, from, to, duration, level) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(Math.max(80, from), start);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(80, to), start + duration);
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(Math.max(160, from * 2), start);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(180, to * 2.2), start + duration);
+      filter.Q.setValueAtTime(22, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(level, start + 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(filter).connect(gain).connect(glassBus);
+      osc.start(start);
+      osc.stop(start + duration + 0.05);
+    }
+
+    function playTone(start, freq, duration, type, level) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(Math.min(5200, freq * 5), start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(level, start + 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(filter).connect(gain).connect(masterGain);
+      osc.start(start);
+      osc.stop(start + duration + 0.05);
+    }
+
+    function playSweep(start, from, to, duration, level) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(from, start);
+      osc.frequency.exponentialRampToValueAtTime(to, start + duration);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(level, start + 0.045);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain).connect(masterGain);
+      osc.start(start);
+      osc.stop(start + duration + 0.05);
+    }
+
+    async function start() {
+      if (running) return;
+      if (!window.Hands || !window.Camera) {
+        statusText.textContent = "手勢辨識程式尚未載入。請確認平板可連線，或稍後重整。";
+        return;
+      }
+
+      setupAudio();
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      startBtn.classList.add("running");
+      startBtn.textContent = "辨識中";
+      statusText.textContent = "正在啟動攝影機，請允許權限。";
+
+      hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0,
+        minDetectionConfidence: 0.60,
+        minTrackingConfidence: 0.55
+      });
+      hands.onResults(onHandResults);
+
+      camera = new Camera(cameraVideo, {
+        onFrame: async () => {
+          if (cameraVideo.readyState >= 2) await hands.send({ image: cameraVideo });
+        },
+        width: 480,
+        height: 360
+      });
+
+      try {
+        await camera.start();
+        running = true;
+        statusText.textContent = "請把手放在鏡頭前，慢慢做動作。";
+      } catch (error) {
+        statusText.textContent = "攝影機啟動失敗。請確認瀏覽器攝影機權限，並用 HTTPS 開啟。";
+        startBtn.classList.remove("running");
+        startBtn.textContent = "開始互動";
+      }
+    }
+
+    function onHandResults(results) {
+      drawHand(results);
+      const points = results.multiHandLandmarks?.[0];
+      if (!points) {
+        currentGesture = "";
+        stableFrames = 0;
+        lastTip = null;
+        lastGesture = "";
+        repeatGestureArmed = true;
+        repeatMotionWasHigh = false;
+        updateGlassField(null, null);
+        updateGesture("rest", { open: 0, stable: 0, move: 0 }, false);
+        return;
+      }
+
+      const metrics = getHandMetrics(points);
+      const gesture = classifyGesture(points, metrics);
+      stableFrames = gesture === currentGesture ? stableFrames + 1 : 0;
+      const stable = Math.min(1, stableFrames / 12);
+      metrics.stable = stable;
+      updateGlassField(gesture === "tracking" ? "point" : gesture, metrics);
+      updateMeters(metrics);
+      updateGesture(gesture, metrics, stable > 0.38);
+
+      if (gesture && gesture !== "tracking" && gesture !== currentGesture) {
+        currentGesture = gesture;
+      }
+
+      const now = performance.now();
+      const recognized = Boolean(gestureInfo[gesture]);
+      const changed = recognized && gesture !== lastGesture;
+      const allowed = now - lastTriggerTime > 260;
+
+      // 同一手勢重複演奏：先稍微停穩，再用短促的上下／前後敲擊動作重新觸發。
+      // 低移動量會重新上膛；移動量由低跨到高時，只觸發一次，避免鏡頭抖動連發。
+      const motionHigh = metrics.move > 0.30;
+      if (recognized && metrics.move < 0.12 && stable > 0.30) {
+        repeatGestureArmed = true;
+      }
+      const repeatedStrike = recognized
+        && gesture === lastGesture
+        && repeatGestureArmed
+        && motionHigh
+        && !repeatMotionWasHigh
+        && stable > 0.24
+        && allowed;
+
+      if ((changed && allowed && stable > 0.24) || repeatedStrike) {
+        lastGesture = gesture;
+        lastTriggerTime = now;
+        repeatGestureArmed = false;
+        markExercise(gesture);
+        playGestureSound(gesture, metrics);
+        publishMqttNoteEvent(gesture, metrics);
+        burst(metrics.x, metrics.y, gestureInfo[gesture].color, gesture);
+      }
+
+      // 暫時放鬆成未分類手勢，也視為重新準備下一次同音。
+      if (!recognized && gesture === "tracking") {
+        repeatGestureArmed = true;
+        lastGesture = "";
+      }
+      repeatMotionWasHigh = motionHigh;
+    }
+
+    function getHandMetrics(points) {
+      const wrist = points[0];
+      const indexTip = points[8];
+      const handSpan = dist(points[5], points[17]);
+      const openness = [8, 12, 16, 20]
+        .map((tip) => dist(points[tip], wrist))
+        .reduce((sum, value) => sum + value, 0) / Math.max(0.001, handSpan * 4.2);
+      const move = lastTip ? Math.hypot(indexTip.x - lastTip.x, indexTip.y - lastTip.y) * 18 : 0;
+      lastTip = { x: indexTip.x, y: indexTip.y };
+      return {
+        open: clamp((openness - 0.86) / 0.42, 0, 1),
+        move: clamp(move, 0, 1),
+        stable: 0,
+        x: (1 - indexTip.x) * width,
+        y: indexTip.y * height
+      };
+    }
+
+    function classifyGesture(points, metrics) {
+      const indexExtended = isExtended(points, 8, 6);
+      const middleExtended = isExtended(points, 12, 10);
+      const ringExtended = isExtended(points, 16, 14);
+      const pinkyExtended = isExtended(points, 20, 18);
+      const fingers = [indexExtended, middleExtended, ringExtended, pinkyExtended];
+      const extendedCount = fingers.filter(Boolean).length;
+      const palmWidth = Math.max(0.001, dist(points[5], points[17]));
+      const pinch = dist(points[4], points[8]) < palmWidth * 0.34;
+
+      // 拇指是否明顯離開掌心；再以方向過濾「拇指讚」。
+      const palmCenter = {
+        x: (points[0].x + points[5].x + points[9].x + points[13].x + points[17].x) / 5,
+        y: (points[0].y + points[5].y + points[9].y + points[13].y + points[17].y) / 5
+      };
+      const thumbAway = dist(points[4], palmCenter) > palmWidth * 0.92;
+      const thumbUp = thumbAway && points[4].y < points[3].y - 0.025 && points[4].y < points[5].y;
+
+      // 優先處理距離型手勢，避免捏合被誤判為握拳或單指。
+      if (pinch) return "pinch";
+      if (extendedCount >= 4 && metrics.open > 0.56) return "open";
+      if (extendedCount === 0 && thumbUp) return "thumbsUp";
+      if (extendedCount === 0 && metrics.open < 0.38) return "fist";
+
+      // 依四指伸展組合判斷，讓相近姿勢彼此分離。
+      if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended) return "point";
+      if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) return "victory";
+      if (indexExtended && middleExtended && ringExtended && !pinkyExtended) return "three";
+      if (indexExtended && !middleExtended && !ringExtended && pinkyExtended) return "rock";
+      if (!indexExtended && !middleExtended && !ringExtended && pinkyExtended) return "pinky";
+      return "tracking";
+    }
+
+    function updateGesture(gesture, metrics, stableEnough) {
+      const info = gestureInfo[gesture] || { label: "辨識中", help: "請慢慢移動手指，保持在畫面中央。" };
+      const isRecognized = Boolean(gestureInfo[gesture]) && gesture !== "rest" && stableEnough;
+      const displayLabel = gesture === "rest"
+        ? "未偵測到手勢"
+        : isRecognized
+          ? `${info.notation || ""}　${info.pitch || ""}`.trim()
+          : "辨識中";
+
+      gestureName.textContent = stableEnough || gesture === "rest" ? info.label : "辨識中";
+      gestureHelp.textContent = info.help;
+      gestureGridStatus.textContent = displayLabel;
+      gestureTiles.forEach((tile) => {
+        const tileGesture = tile.dataset.gestureTile;
+        const active = isRecognized && tileGesture === gesture;
+        tile.classList.toggle("active", active);
+        tile.style.setProperty("--tile-color", gestureInfo[tileGesture]?.color || "#82f7a7");
+      });
+    }
+
+    function updateMeters() {
+      // 數值狀態列已改為「目前手勢」名稱顯示卡，保留函式避免影響既有流程。
+    }
+
+    function markExercise(gesture) {
+      if (gesture === "fist") exerciseDone.fist = true;
+      if (gesture === "open") exerciseDone.open = true;
+      if (gesture === "pinch") exerciseDone.pinch = true;
+      document.querySelector("#stepFist").classList.toggle("done", exerciseDone.fist);
+      document.querySelector("#stepOpen").classList.toggle("done", exerciseDone.open);
+      document.querySelector("#stepPinch").classList.toggle("done", exerciseDone.pinch);
+      if (exerciseDone.fist && exerciseDone.open && exerciseDone.pinch) {
+        playSuccessPhrase();
+        statusText.textContent = "完成一輪練習，很好。可以休息一下，或再做一次。";
+        window.setTimeout(() => {
+          exerciseDone = { fist: false, open: false, pinch: false };
+          document.querySelectorAll(".step").forEach((step) => step.classList.remove("done"));
+        }, 2600);
+      }
+    }
+
+    function drawHand(results) {
+      const rect = handCanvas.getBoundingClientRect();
+      const cw = Math.max(1, Math.round(rect.width * dpr));
+      const ch = Math.max(1, Math.round(rect.height * dpr));
+      if (handCanvas.width !== cw || handCanvas.height !== ch) {
+        handCanvas.width = cw;
+        handCanvas.height = ch;
+      }
+      hctx.clearRect(0, 0, cw, ch);
+      hctx.save();
+      hctx.scale(cw, ch);
+      const points = results.multiHandLandmarks?.[0];
+      if (points) {
+        hctx.strokeStyle = "rgba(130, 247, 167, 0.78)";
+        hctx.lineWidth = 0.006;
+        handConnections.forEach(([a, b]) => {
+          hctx.beginPath();
+          hctx.moveTo(points[a].x, points[a].y);
+          hctx.lineTo(points[b].x, points[b].y);
+          hctx.stroke();
+        });
+        hctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+        points.forEach((point, index) => {
+          hctx.beginPath();
+          hctx.arc(point.x, point.y, index === 4 || index === 8 ? 0.014 : 0.008, 0, Math.PI * 2);
+          hctx.fill();
+        });
+      }
+      hctx.restore();
+    }
+
+    function burst(x, y, color, gesture) {
+      rings.push({ x, y, r: 12, color, alpha: 0.8, life: 0, gesture });
+      for (let i = 0; i < 28; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 5;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color,
+          size: 2 + Math.random() * 4,
+          life: 0,
+          max: 60 + Math.random() * 45
+        });
+      }
+    }
+
+    function drawVisual() {
+      vctx.clearRect(0, 0, width, height);
+      const gradient = vctx.createRadialGradient(width * 0.5, height * 0.5, 0, width * 0.5, height * 0.5, Math.max(width, height) * 0.8);
+      gradient.addColorStop(0, "rgba(30, 78, 46, 0.42)");
+      gradient.addColorStop(1, "rgba(2, 7, 4, 0.82)");
+      vctx.fillStyle = gradient;
+      vctx.fillRect(0, 0, width, height);
+
+      vctx.save();
+      vctx.globalCompositeOperation = "lighter";
+      for (let i = rings.length - 1; i >= 0; i -= 1) {
+        const ring = rings[i];
+        ring.life += 1;
+        ring.r += 4 + ring.life * 0.05;
+        ring.alpha *= 0.965;
+        vctx.strokeStyle = withAlpha(ring.color, ring.alpha);
+        vctx.lineWidth = 3 * dpr;
+        vctx.beginPath();
+        vctx.arc(ring.x, ring.y, ring.r * dpr, 0, Math.PI * 2);
+        vctx.stroke();
+        if (ring.alpha < 0.025) rings.splice(i, 1);
+      }
+
+      for (let i = particles.length - 1; i >= 0; i -= 1) {
+        const p = particles[i];
+        p.life += 1;
+        p.x += p.vx * dpr;
+        p.y += p.vy * dpr;
+        p.vx *= 0.982;
+        p.vy *= 0.982;
+        const alpha = Math.max(0, 1 - p.life / p.max);
+        vctx.fillStyle = withAlpha(p.color, alpha * 0.85);
+        vctx.beginPath();
+        vctx.arc(p.x, p.y, p.size * dpr * alpha, 0, Math.PI * 2);
+        vctx.fill();
+        if (p.life > p.max) particles.splice(i, 1);
+      }
+      vctx.restore();
+
+      requestAnimationFrame(drawVisual);
+    }
+
+    function isExtended(points, tip, joint) {
+      return points[tip].y < points[joint].y - 0.018;
+    }
+
+    function dist(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function withAlpha(color, alpha) {
+      if (color.startsWith("#")) {
+        const hex = color.slice(1);
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+      return color;
+    }
+
+
+    // ===== 互動音樂引擎 v2：四層聲部（持續底音／手勢旋律／玻璃爆裂／水滴群） =====
+    let musicCompressor;
+    let ambientBus;
+    let melodyBus;
+    let impactBus;
+    let dropletBus;
+    let ambientVoices = [];
+    let musicClock = null;
+    let musicTick = 0;
+    let liveHand = false;
+    let liveGesture = "rest";
+    let liveMetrics = { open: 0, move: 0, stable: 0, x: 0, y: 0 };
+    let lastDropletAt = 0;
+    const layerLevel = { ambient: 0.62, melody: 0.88, impact: 0.82, droplets: 0.68 };
+
+    function buildAudioControls() {
+      const side = document.querySelector('.side');
+      const exercisePanel = document.querySelector('.exercise')?.closest('.panel');
+      if (!side || document.querySelector('#audioLayerPanel')) return;
+      const panel = document.createElement('section');
+      panel.className = 'panel';
+      panel.id = 'audioLayerPanel';
+      panel.innerHTML = `
+        <h2>音樂層次</h2>
+        <div class="audio-sliders">
+          ${[
+            ['ambient','持續底音',62],['melody','手勢旋律',88],['impact','玻璃爆裂',82],['droplets','水滴群',68]
+          ].map(([key,label,value]) => `
+            <label class="audio-slider" for="layer-${key}">
+              <span>${label}</span><b id="layer-${key}-out">${value}</b>
+              <input id="layer-${key}" type="range" min="0" max="100" value="${value}">
+            </label>`).join('')}
+        </div>
+        <p class="hint">左右移動控制音高，上下移動控制明暗；速度控制水滴密度，張開度控制和聲厚度。</p>`;
+      side.insertBefore(panel, exercisePanel || null);
+      const style = document.createElement('style');
+      style.textContent = `
+        .audio-sliders{display:grid;gap:12px}.audio-slider{display:grid;grid-template-columns:1fr 38px;gap:6px 10px;align-items:center;color:var(--muted);font-size:14px}.audio-slider b{text-align:right;color:var(--ink)}.audio-slider input{grid-column:1/-1;width:100%;accent-color:var(--accent);min-height:28px}`;
+      document.head.appendChild(style);
+      Object.keys(layerLevel).forEach((key) => {
+        const input = document.querySelector(`#layer-${key}`);
+        const out = document.querySelector(`#layer-${key}-out`);
+        input?.addEventListener('input', () => {
+          layerLevel[key] = Number(input.value) / 100;
+          out.textContent = input.value;
+          applyLayerLevels();
+        });
+      });
+    }
+
+    function applyLayerLevels() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      ambientBus?.gain.setTargetAtTime(layerLevel.ambient, now, 0.08);
+      melodyBus?.gain.setTargetAtTime(layerLevel.melody, now, 0.08);
+      impactBus?.gain.setTargetAtTime(layerLevel.impact, now, 0.08);
+      dropletBus?.gain.setTargetAtTime(layerLevel.droplets, now, 0.08);
+    }
+
+    function setupAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      musicCompressor = audioCtx.createDynamicsCompressor();
+      musicCompressor.threshold.value = -18;
+      musicCompressor.knee.value = 18;
+      musicCompressor.ratio.value = 5;
+      musicCompressor.attack.value = 0.008;
+      musicCompressor.release.value = 0.28;
+
+      ambientBus = audioCtx.createGain();
+      melodyBus = audioCtx.createGain();
+      impactBus = audioCtx.createGain();
+      dropletBus = audioCtx.createGain();
+      glassBus = impactBus;
+      delayNode = audioCtx.createDelay(1.5);
+      feedbackGain = audioCtx.createGain();
+      const wetGain = audioCtx.createGain();
+      const dryGain = audioCtx.createGain();
+
+      masterGain.gain.value = 0.74;
+      dryGain.gain.value = 0.88;
+      delayNode.delayTime.value = 0.31;
+      feedbackGain.gain.value = 0.38;
+      wetGain.gain.value = 0.38;
+
+      [ambientBus, melodyBus, impactBus, dropletBus].forEach((bus) => {
+        bus.connect(dryGain);
+        bus.connect(delayNode);
+      });
+      delayNode.connect(feedbackGain).connect(delayNode);
+      delayNode.connect(wetGain);
+      dryGain.connect(masterGain);
+      wetGain.connect(masterGain);
+      masterGain.connect(musicCompressor).connect(audioCtx.destination);
+      applyLayerLevels();
+      setupAmbientVoices();
+      startMusicClock();
+    }
+
+    function setupAmbientVoices() {
+      if (ambientVoices.length || !audioCtx) return;
+      const ratios = [0.5, 1, 1.5, 2.02, 2.74, 4.15];
+      ambientVoices = ratios.map((ratio, index) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        const pan = audioCtx.createStereoPanner();
+        osc.type = index % 3 === 0 ? 'triangle' : 'sine';
+        osc.frequency.value = 196 * ratio;
+        filter.type = 'bandpass';
+        filter.frequency.value = 196 * ratio;
+        filter.Q.value = 14 + index * 4;
+        gain.gain.value = 0.0001;
+        pan.pan.value = -0.55 + index * 0.22;
+        osc.connect(filter).connect(gain).connect(pan).connect(ambientBus);
+        osc.start();
+        return { osc, gain, filter, ratio, drift: Math.random() * 10 };
+      });
+    }
+
+    function startMusicClock() {
+      if (musicClock) return;
+      musicClock = window.setInterval(() => {
+        if (!audioCtx || audioCtx.state !== 'running' || !liveHand) return;
+        const step = musicTick++;
+        if (step % 2 === 0) playContinuousMelody(step);
+        const dropletInterval = Math.max(1, 6 - Math.round(liveMetrics.move * 5));
+        if (step % dropletInterval === 0 && liveMetrics.move > 0.06) playContinuousDroplet();
+      }, 145);
+    }
+
+    function updateGlassField(gesture, metrics) {
+      if (!audioCtx || !ambientVoices.length) return;
+      const now = audioCtx.currentTime;
+      liveHand = Boolean(gesture && metrics);
+      if (!liveHand) {
+        liveGesture = 'rest';
+        ambientVoices.forEach((voice) => voice.gain.gain.setTargetAtTime(0.0001, now, 0.55));
+        return;
+      }
+      liveGesture = gesture || 'point';
+      liveMetrics = { ...metrics };
+      const xNorm = clamp((metrics.x || 0) / Math.max(1, width), 0, 1);
+      const yNorm = clamp((metrics.y || 0) / Math.max(1, height), 0, 1);
+      const root = (gestureInfo[liveGesture]?.note || 261.625565) * 0.5;
+      const brightness = 900 + (1 - yNorm) * 5200;
+      const energy = 0.35 + metrics.open * 0.42 + metrics.stable * 0.20;
+      ambientVoices.forEach((voice, index) => {
+        const shimmer = 1 + Math.sin(now * (0.22 + index * 0.05) + voice.drift) * (0.003 + metrics.move * 0.012);
+        const freq = root * voice.ratio * shimmer;
+        voice.osc.frequency.setTargetAtTime(freq, now, 0.16);
+        voice.filter.frequency.setTargetAtTime(Math.min(8500, Math.max(120, freq * 2 + brightness * 0.18)), now, 0.16);
+        voice.filter.Q.setTargetAtTime(12 + metrics.stable * 30 + index * 3, now, 0.18);
+        const harmonic = Math.max(0.18, 1 - index * 0.12);
+        voice.gain.gain.setTargetAtTime((0.010 + energy * 0.026 + metrics.open * 0.018) * harmonic, now, 0.22);
+      });
+      delayNode.delayTime.setTargetAtTime(0.22 + xNorm * 0.24, now, 0.18);
+      feedbackGain.gain.setTargetAtTime(Math.min(0.52, 0.24 + metrics.stable * 0.18 + metrics.open * 0.08), now, 0.2);
+    }
+
+    function gesturePattern(gesture) {
+      return {
+        open:     [0, 4, 7, 11, 14, 9, 7, 4],
+        fist:     [7, 3, 0, -5, 0, 3, -2, -5],
+        pinch:    [12, 7, 14, 9, 16, 11, 7, 19],
+        point:    [0, 2, 7, 4, 9, 7, 11, 4],
+        victory:  [0, 7, 11, 14, 11, 7, 4, 9],
+        three:    [0, 2, 5, 9, 12, 9, 5, 2],
+        rock:     [0, 7, 3, 10, 0, -5, 7, 12],
+        pinky:    [12, 9, 7, 4, 2, 0, -3, 4],
+        thumbsUp: [0, 5, 9, 12, 16, 12, 9, 5]
+      }[gesture] || [0, 4, 7, 9, 7, 4, 2, 0];
+    }
+
+    function playContinuousMelody(step) {
+      const pattern = gesturePattern(liveGesture);
+      const degree = pattern[step % pattern.length];
+      const xNorm = clamp((liveMetrics.x || 0) / Math.max(1, width), 0, 1);
+      const yNorm = clamp((liveMetrics.y || 0) / Math.max(1, height), 0, 1);
+      const root = gestureInfo[liveGesture]?.note || 261.625565;
+      const freq = root * Math.pow(2, degree / 12);
+      const level = 0.006 + liveMetrics.open * 0.010 + liveMetrics.stable * 0.006;
+      const duration = 0.38 + liveMetrics.stable * 0.62;
+      playLayerTone(melodyBus, audioCtx.currentTime + 0.015, freq, duration, level, yNorm, step);
+      if (liveMetrics.open > 0.58 && step % 4 === 0) {
+        playLayerTone(melodyBus, audioCtx.currentTime + 0.025, freq * 1.498, duration * 1.18, level * 0.46, yNorm, step + 2);
+      }
+    }
+
+    function playLayerTone(bus, start, freq, duration, level, yNorm, index) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const pan = audioCtx.createStereoPanner();
+      osc.type = index % 3 === 0 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(Math.max(70, Math.min(7600, freq)), start);
+      osc.detune.value = 0;
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(Math.min(8500, freq * (2.2 + (1 - yNorm) * 3.6)), start);
+      filter.Q.value = 18 + liveMetrics.stable * 24;
+      pan.pan.value = clamp(((liveMetrics.x || width / 2) / Math.max(1, width) - 0.5) * 1.4, -0.7, 0.7);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.001, level), start + 0.018);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.16), start + duration * 0.46);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(filter).connect(gain).connect(pan).connect(bus);
+      osc.start(start);
+      osc.stop(start + duration + 0.06);
+    }
+
+    function playContinuousDroplet() {
+      const now = performance.now();
+      if (now - lastDropletAt < 70) return;
+      lastDropletAt = now;
+      const xNorm = clamp((liveMetrics.x || 0) / Math.max(1, width), 0, 1);
+      const yNorm = clamp((liveMetrics.y || 0) / Math.max(1, height), 0, 1);
+      const base = 900 + xNorm * 2300 + (1 - yNorm) * 1900;
+      const count = 1 + Math.floor(liveMetrics.move * 4);
+      for (let i = 0; i < count; i += 1) {
+        const start = audioCtx.currentTime + i * 0.022 + Math.random() * 0.035;
+        const freq = base * (0.72 + Math.random() * 1.1);
+        playToneSweep(dropletBus, start, freq, freq * (0.24 + Math.random() * 0.32), 0.07 + Math.random() * 0.12, 'sine', 0.012 + liveMetrics.move * 0.028);
+      }
+    }
+
+    function playTunedMainNote(start, frequency, velocity = 0.12) {
+      // 標準十二平均律主音：不加隨機 detune、不滑音，讓 Do～高音 Re 清楚可校音。
+      const noteGain = audioCtx.createGain();
+      const body = audioCtx.createOscillator();
+      const shine = audioCtx.createOscillator();
+      const bodyGain = audioCtx.createGain();
+      const shineGain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      body.type = 'sine';
+      shine.type = 'triangle';
+      body.frequency.setValueAtTime(frequency, start);
+      shine.frequency.setValueAtTime(frequency * 2, start);
+      body.detune.setValueAtTime(0, start);
+      shine.detune.setValueAtTime(0, start);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(Math.min(5200, frequency * 7), start);
+      filter.Q.value = 0.7;
+
+      noteGain.gain.setValueAtTime(0.0001, start);
+      noteGain.gain.exponentialRampToValueAtTime(Math.max(0.035, velocity), start + 0.012);
+      noteGain.gain.exponentialRampToValueAtTime(Math.max(0.008, velocity * 0.34), start + 0.34);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.82);
+      bodyGain.gain.value = 0.90;
+      shineGain.gain.value = 0.10;
+
+      body.connect(bodyGain).connect(filter);
+      shine.connect(shineGain).connect(filter);
+      filter.connect(noteGain).connect(melodyBus);
+      body.start(start);
+      shine.start(start);
+      body.stop(start + 0.88);
+      shine.stop(start + 0.88);
+    }
+
+    function playGestureSound(gesture, metrics) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const info = gestureInfo[gesture] || gestureInfo.point;
+      const xNorm = clamp((metrics.x || 0) / Math.max(1, width), 0, 1);
+      const base = info.note; // 九種手勢固定對應九個標準音高。
+      playTunedMainNote(now, base, 0.13 + metrics.move * 0.035);
+      const impact = 0.018 + metrics.move * 0.030 + metrics.open * 0.014;
+      // 效果聲只採整數／近整數泛音並降低音量，避免遮蔽標準主音。
+      playResonantCluster(impactBus, now + 0.018, base, [1, 2, 3, 4, 5, 6], 1.2 + metrics.stable * 1.4, 'sine', impact, 22 + metrics.stable * 28);
+      playNoiseBurst(impactBus, now + 0.01, 0.10 + metrics.move * 0.12, 3600 + metrics.open * 3200, 0.006 + metrics.move * 0.014, 'highpass', 10 + metrics.stable * 16);
+      if (gesture === 'open') playGlassSweep(now, base * 0.7, base * 2.4, 1.05, impact * 0.7);
+      if (gesture === 'fist') playGlassSweep(now, base * 1.8, base * 0.52, 0.72, impact * 0.65);
+      if (gesture === 'pinch') {
+        playGlassSweep(now, base * 3.2, base * 1.1, 0.48, impact * 0.75);
+        for (let i = 0; i < 7; i += 1) {
+          const f = base * (2.2 + Math.random() * 5.2);
+          playToneSweep(impactBus, now + i * 0.025, f, f * 0.32, 0.05 + Math.random() * 0.09, 'sine', impact * 0.20);
+        }
+      }
+      if (gesture === 'victory') {
+        playGlassSweep(now, base * 0.9, base * 1.8, 0.62, impact * 0.52);
+        playGlassSweep(now + 0.09, base * 1.12, base * 2.25, 0.58, impact * 0.42);
+      }
+      if (gesture === 'three') {
+        [1, 1.26, 1.5].forEach((ratio, index) => {
+          playGlassSweep(now + index * 0.07, base * ratio, base * ratio * 1.8, 0.72, impact * 0.36);
+        });
+      }
+      if (gesture === 'rock') {
+        playGlassSweep(now, base * 0.55, base * 2.8, 0.82, impact * 0.62);
+        playNoiseBurst(impactBus, now + 0.035, 0.22, 2100, impact * 0.38, 'bandpass', 8);
+      }
+      if (gesture === 'pinky') {
+        playGlassSweep(now, base * 2.6, base * 4.2, 0.42, impact * 0.42);
+      }
+      if (gesture === 'thumbsUp') {
+        [0, 4, 7, 12].forEach((degree, index) => {
+          const freq = base * Math.pow(2, degree / 12);
+          playLayerTone(impactBus, now + index * 0.08, freq, 0.65, impact * 0.42, 0.35, index);
+        });
+      }
+    }
+
+
+    // ===== MQTT over WSS：平板 → Broker → ESP32／WS2812 =====
+    const MQTT_STORAGE_KEY = "bambooMusicMqttSettingsV1";
+    const MQTT_SEND_INTERVAL_MS = 66; // 約 15 FPS
+    const gestureNoteNumber = {
+      point: 1,
+      victory: 2,
+      three: 3,
+      rock: 4,
+      open: 5,
+      fist: 6,
+      pinch: 7,
+      thumbsUp: 8,
+      pinky: 9
+    };
+
+    let mqttClient = null;
+    let mqttSpectrumTimer = null;
+    let mqttSequence = 0;
+    let mqttGestureCount = 0;
+    let mqttSpectrumCount = 0;
+
+    function normalizeTopicBase(value) {
+      const normalized = String(value || "/user/lester47/bamboo")
+        .trim()
+        .replace(/\/+$/g, "");
+      return normalized.startsWith("/") ? normalized : `/${normalized}`;
+    }
+
+    function mqttTopics() {
+      const base = normalizeTopicBase(mqttTopicBaseInput.value);
+      return {
+        note: `${base}/led/note`,
+        spectrum: `${base}/led/spectrum`,
+        control: `${base}/led/control`,
+        status: `${base}/led/status`
+      };
+    }
+
+    function setMqttStatus(state, message) {
+      mqttStatusDot.className = `mqtt-dot${state ? ` ${state}` : ""}`;
+      mqttStatusText.textContent = message;
+    }
+
+    function updateMqttStats() {
+      mqttStats.textContent = `手勢事件：${mqttGestureCount}　頻譜封包：${mqttSpectrumCount}`;
+    }
+
+    function saveMqttSettings() {
+      const settings = {
+        url: mqttUrlInput.value.trim(),
+        topicBase: normalizeTopicBase(mqttTopicBaseInput.value),
+        username: mqttUsernameInput.value.trim()
+        // 安全考量：不把密碼寫入 localStorage。
+      };
+      localStorage.setItem(MQTT_STORAGE_KEY, JSON.stringify(settings));
+    }
+
+    function loadMqttSettings() {
+      try {
+        const settings = JSON.parse(localStorage.getItem(MQTT_STORAGE_KEY) || "{}");
+        mqttUrlInput.value = settings.url || "wss://mqttgo.io:8084";
+        mqttTopicBaseInput.value = settings.topicBase || "/user/lester47/bamboo";
+        if (settings.username) mqttUsernameInput.value = settings.username;
+      } catch (error) {
+        console.warn("MQTT 設定讀取失敗", error);
+      }
+    }
+
+    function disconnectMqtt(showStatus = true) {
+      stopMqttSpectrumLoop();
+      if (mqttClient) {
+        try {
+          mqttClient.end(true);
+        } catch (error) {
+          console.warn("MQTT 中斷時發生錯誤", error);
+        }
+      }
+      mqttClient = null;
+      if (showStatus) setMqttStatus("", "已中斷");
+    }
+
+    function connectMqtt() {
+      const url = mqttUrlInput.value.trim();
+      if (!url) {
+        setMqttStatus("error", "請先輸入 WSS Broker 網址");
+        mqttUrlInput.focus();
+        return;
+      }
+      if (!/^wss:\/\//i.test(url)) {
+        setMqttStatus("error", "GitHub Pages 請使用 wss:// 網址");
+        return;
+      }
+      if (!window.mqtt?.connect) {
+        setMqttStatus("error", "MQTT.js 尚未載入");
+        return;
+      }
+
+      disconnectMqtt(false);
+      saveMqttSettings();
+      setMqttStatus("connecting", "正在連接 MQTT…");
+
+      const options = {
+        clientId: `bamboo_tablet_${Math.random().toString(16).slice(2, 10)}`,
+        clean: true,
+        reconnectPeriod: 2000,
+        connectTimeout: 10000,
+        keepalive: 30
+      };
+      const username = mqttUsernameInput.value.trim();
+      const password = mqttPasswordInput.value;
+      if (username) options.username = username;
+      if (password) options.password = password;
+
+      try {
+        mqttClient = window.mqtt.connect(url, options);
+      } catch (error) {
+        setMqttStatus("error", `連線建立失敗：${error.message}`);
+        return;
+      }
+
+      mqttClient.on("connect", () => {
+        const topics = mqttTopics();
+        setMqttStatus("connected", "MQTT 已連線，正在傳送燈板資料");
+        mqttClient.subscribe(topics.status, { qos: 0 }, () => {});
+        mqttClient.publish(
+          topics.control,
+          JSON.stringify({
+            event: "web_online",
+            source: "tablet",
+            time: Date.now()
+          }),
+          { qos: 0, retain: false }
+        );
+        startMqttSpectrumLoop();
+      });
+
+      mqttClient.on("reconnect", () => {
+        setMqttStatus("connecting", "MQTT 重新連線中…");
+      });
+
+      mqttClient.on("offline", () => {
+        setMqttStatus("error", "MQTT 離線，等待重連");
+        stopMqttSpectrumLoop();
+      });
+
+      mqttClient.on("close", () => {
+        if (mqttClient) setMqttStatus("", "MQTT 連線已關閉");
+        stopMqttSpectrumLoop();
+      });
+
+      mqttClient.on("error", (error) => {
+        setMqttStatus("error", `MQTT 錯誤：${error.message}`);
+      });
+
+      mqttClient.on("message", (topic, payload) => {
+        if (topic === mqttTopics().status) {
+          try {
+            const status = JSON.parse(payload.toString());
+            if (status.online === true) {
+              const rssiText = Number.isFinite(status.rssi) ? `，RSSI ${status.rssi} dBm` : "";
+              setMqttStatus("connected", `MQTT 已連線，ESP32 在線${rssiText}`);
+            }
+          } catch (_) {
+            // 非 JSON 狀態訊息不影響主程式。
+          }
+        }
+      });
+    }
+
+    function publishMqttNoteEvent(gesture, metrics) {
+      if (!mqttClient?.connected) return;
+      const info = gestureInfo[gesture];
+      const note = gestureNoteNumber[gesture];
+      if (!info || !note) return;
+
+      const payload = {
+        event: "note_on",
+        seq: mqttSequence++,
+        note,
+        notation: info.notation,
+        pitchName: info.pitch,
+        frequency: info.note,
+        gesture,
+        energy: Math.round(clamp(
+          metrics.open * 0.35 + metrics.move * 0.45 + metrics.stable * 0.20,
+          0,
+          1
+        ) * 100),
+        time: Date.now()
+      };
+
+      mqttClient.publish(
+        mqttTopics().note,
+        JSON.stringify(payload),
+        { qos: 0, retain: false }
+      );
+      mqttGestureCount += 1;
+      updateMqttStats();
+
+      // 防止瀏覽器背景切換或重連後計時器遺失。
+      if (mqttSpectrumTimer === null) {
+        startMqttSpectrumLoop();
+      }
+    }
+
+    function calculateLedBands() {
+      if (!audioAnalyser || !analyserFrequencyData || !audioCtx) {
+        return new Array(16).fill(0);
+      }
+
+      audioAnalyser.getByteFrequencyData(analyserFrequencyData);
+      const nyquist = audioCtx.sampleRate / 2;
+      const minHz = 70;
+      const maxHz = Math.min(8000, nyquist);
+      const bands = [];
+
+      for (let column = 0; column < 16; column += 1) {
+        const startHz = minHz * Math.pow(maxHz / minHz, column / 16);
+        const endHz = minHz * Math.pow(maxHz / minHz, (column + 1) / 16);
+        const startBin = Math.max(
+          0,
+          Math.floor(startHz / nyquist * analyserFrequencyData.length)
+        );
+        const endBin = Math.min(
+          analyserFrequencyData.length,
+          Math.max(startBin + 1, Math.ceil(endHz / nyquist * analyserFrequencyData.length))
+        );
+
+        let sum = 0;
+        let peak = 0;
+        for (let i = startBin; i < endBin; i += 1) {
+          const value = analyserFrequencyData[i];
+          sum += value;
+          peak = Math.max(peak, value);
+        }
+        const average = sum / Math.max(1, endBin - startBin);
+        const mixed = average * 0.68 + peak * 0.32;
+        bands.push(Math.round(clamp((mixed - 18) / 11.8, 0, 16)));
+      }
+      return bands;
+    }
+
+    function publishMqttTest() {
+      if (!mqttClient?.connected) {
+        setMqttStatus("error", "請先連接 MQTT");
+        return;
+      }
+
+      const payload = {
+        event: "test",
+        source: "tablet",
+        message: "MQTTGO test",
+        note: 5,
+        notation: "5 Sol",
+        pitchName: "G4",
+        frequency: 392,
+        gesture: "open",
+        bands: [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 14, 11, 8, 4, 2],
+        time: Date.now()
+      };
+
+      mqttClient.publish(
+        mqttTopics().note,
+        JSON.stringify(payload),
+        { qos: 0, retain: false },
+        (error) => {
+          if (error) {
+            setMqttStatus("error", `測試封包送出失敗：${error.message}`);
+          } else {
+            setMqttStatus("connected", "測試封包已送出");
+            mqttGestureCount += 1;
+            updateMqttStats();
+          }
+        }
+      );
+
+      mqttClient.publish(
+        mqttTopics().spectrum,
+        JSON.stringify({
+          seq: mqttSequence++,
+          bands: payload.bands,
+          note: 5,
+          gesture: "open",
+          pitch: 392,
+          energy: 60,
+          time: Date.now()
+        }),
+        { qos: 0, retain: false },
+        (error) => {
+          if (!error) {
+            mqttSpectrumCount += 1;
+            updateMqttStats();
+          }
+        }
+      );
+    }
+
+    function publishMqttSpectrum() {
+      if (!mqttClient?.connected) return;
+
+      const gesture = gestureInfo[currentGesture] ? currentGesture : "none";
+      const info = gestureInfo[gesture];
+      // 音訊尚未啟動時先送 16 個 0；啟動後自動改為真實頻譜。
+      const bands = audioAnalyser
+        ? calculateLedBands()
+        : new Array(16).fill(0);
+
+      const payload = {
+        seq: mqttSequence++,
+        bands,
+        note: gestureNoteNumber[gesture] || 0,
+        gesture,
+        pitch: info?.note || 0,
+        energy: Math.round(
+          bands.reduce((sum, value) => sum + value, 0) / (16 * 16) * 100
+        ),
+        time: Date.now()
+      };
+
+      mqttClient.publish(
+        mqttTopics().spectrum,
+        JSON.stringify(payload),
+        { qos: 0, retain: false }
+      );
+      mqttSpectrumCount += 1;
+      if (mqttSpectrumCount % 15 === 0) updateMqttStats();
+    }
+
+    function startMqttSpectrumLoop() {
+      stopMqttSpectrumLoop();
+      publishMqttSpectrum();
+      mqttSpectrumTimer = window.setInterval(
+        publishMqttSpectrum,
+        MQTT_SEND_INTERVAL_MS
+      );
+    }
+
+    function stopMqttSpectrumLoop() {
+      if (mqttSpectrumTimer !== null) {
+        window.clearInterval(mqttSpectrumTimer);
+        mqttSpectrumTimer = null;
+      }
+    }
+
+    loadMqttSettings();
+    updateMqttStats();
+    mqttConnectBtn.addEventListener("click", connectMqtt);
+    mqttTestBtn.addEventListener("click", publishMqttTest);
+    mqttDisconnectBtn.addEventListener("click", () => disconnectMqtt(true));
+    window.addEventListener("beforeunload", () => disconnectMqtt(false));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && mqttClient?.connected) {
+        startMqttSpectrumLoop();
+      }
+    });
+
+    buildAudioControls();
+
+    document.querySelectorAll(".mode").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeMode = button.dataset.mode;
+        document.querySelectorAll(".mode").forEach((item) => item.classList.toggle("active", item === button));
+      });
+    });
+
+    startBtn.addEventListener("click", start);
+    window.addEventListener("resize", resize);
+    resize();
+    drawVisual();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
