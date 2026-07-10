@@ -1,0 +1,11 @@
+{
+  "name": "手勢音階互動樂器",
+  "short_name": "手勢音樂",
+  "description": "適合 iPad 與 Android 平板使用的九宮格手勢音階互動樂器。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#06110b",
+  "theme_color": "#10251a",
+  "orientation": "landscape",
+  "icons": []
+}
