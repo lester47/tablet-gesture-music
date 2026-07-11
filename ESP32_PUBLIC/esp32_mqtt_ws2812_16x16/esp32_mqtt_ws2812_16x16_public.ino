@@ -60,6 +60,7 @@ float smoothBands[AUDIO_BANDS] = {0};
 uint8_t currentNote = 0;
 uint8_t currentEnergy = 0;
 String currentGesture = "none";
+CRGB currentModeColor = CRGB(80, 170, 255);
 
 uint32_t lastSpectrumPacket = 0;
 uint32_t lastNotePacket = 0;
@@ -140,8 +141,15 @@ CRGB noteColorFixed(uint8_t note) {
   }
 }
 
+CRGB randomModeColor() {
+  uint8_t hue = random8();
+  uint8_t saturation = random8(180, 255);
+  uint8_t value = random8(190, 255);
+  return CHSV(hue, saturation, value);
+}
+
 CRGB noteEventColor() {
-  CRGB color = noteColorFixed(currentNote);
+  CRGB color = currentModeColor;
   color.nscale8_video(noteBurstBrightness);
   return color;
 }
@@ -262,6 +270,7 @@ void handleNoteJson(const JsonDocument& doc) {
   const char* gesture = doc["gesture"] | "none";
   currentGesture = gesture;
 
+  currentModeColor = randomModeColor();
   noteBurstActive = true;
   noteBurstRadius = 0;
   noteBurstBrightness = map(currentEnergy, 0, 100, 140, 255);
@@ -272,7 +281,9 @@ void handleNoteJson(const JsonDocument& doc) {
   Serial.print(" gesture=");
   Serial.print(currentGesture);
   Serial.print(" energy=");
-  Serial.println(currentEnergy);
+  Serial.print(currentEnergy);
+  Serial.print(" color=#");
+  Serial.println(String(currentModeColor.r, HEX) + String(currentModeColor.g, HEX) + String(currentModeColor.b, HEX));
 }
 
 void mqttCallback(
@@ -389,7 +400,7 @@ void drawSpectrum() {
   bool dataFresh =
     millis() - lastSpectrumPacket < SPECTRUM_TIMEOUT_MS;
 
-  CRGB baseColor = noteColorFixed(currentNote);
+  CRGB baseColor = currentModeColor;
 
   for (uint8_t x = 0; x < AUDIO_BANDS; x++) {
     float desired = dataFresh ? targetBands[x] : 0.0f;
@@ -649,6 +660,8 @@ void drawIdleIndicator() {
 void setup() {
   delay(800);
   Serial.begin(115200);
+  random16_add_entropy(static_cast<uint16_t>(esp_random()));
+  random16_set_seed(static_cast<uint16_t>(esp_random()));
 
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(
     leds,

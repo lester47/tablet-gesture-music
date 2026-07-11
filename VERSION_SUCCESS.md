@@ -70,3 +70,13 @@ Public redacted example:
 
 `ESP32_PUBLIC/esp32_mqtt_ws2812_16x16/`
 
+## v3 ESP32 Random Mode Colors
+
+Date: 2026-07-11
+
+The ESP32 LED receiver keeps the v2 9-animation engine, and now chooses a fresh vivid random color whenever a new note/mode event is received. The note animation and following spectrum bars share that random color until the next event.
+
+Local private backup:
+
+`success_versions/esp32_v3_random_mode_colors_private/`
+

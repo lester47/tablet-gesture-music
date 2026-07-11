@@ -34,6 +34,8 @@ The v2 animation engine maps the 9 note events to 9 LED behaviors:
 - High Do: fountain
 - High Re: firework
 
+The v3 random-color update keeps the 9 animation behaviors, but assigns a fresh vivid color whenever a new note/mode event arrives. The spectrum bars then continue with the same random color until the next event.
+
 PlatformIO / VS Code upload:
 
 ```bash
