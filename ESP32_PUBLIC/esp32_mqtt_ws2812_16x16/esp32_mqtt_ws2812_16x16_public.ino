@@ -8,6 +8,7 @@
 // 蝖祇?閮剖?
 // ============================================================
 #define DATA_PIN 18
+#define STATUS_LED_PIN 2
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
 
@@ -66,6 +67,7 @@ uint32_t lastSpectrumPacket = 0;
 uint32_t lastNotePacket = 0;
 uint32_t lastLedFrame = 0;
 uint32_t lastStatusPublish = 0;
+uint32_t lastWifiBlink = 0;
 
 constexpr uint32_t SPECTRUM_TIMEOUT_MS = 1800;
 constexpr uint32_t LED_FRAME_INTERVAL_MS = 50;
@@ -73,6 +75,7 @@ constexpr uint32_t STATUS_INTERVAL_MS = 8000;
 constexpr uint32_t SPECTRUM_PACKET_MIN_INTERVAL_MS = 100;
 constexpr uint32_t NOTE_EVENT_MIN_INTERVAL_MS = 140;
 constexpr uint8_t NOTE_ANIMATION_MAX_PHASE = 22;
+constexpr uint32_t WIFI_WAIT_BLINK_INTERVAL_MS = 600;
 
 bool noteBurstActive = false;
 uint8_t noteBurstRadius = 0;
@@ -112,6 +115,30 @@ void addPixelXY(uint8_t x, uint8_t y, const CRGB& color) {
 
 void clearMatrix() {
   fill_solid(leds, NUM_LEDS, CRGB::Black);
+}
+
+void statusLedOff() {
+  digitalWrite(STATUS_LED_PIN, LOW);
+}
+
+void blinkWifiWaitingLed() {
+  uint32_t now = millis();
+
+  if (now - lastWifiBlink >= WIFI_WAIT_BLINK_INTERVAL_MS) {
+    lastWifiBlink = now;
+    digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+  }
+}
+
+void blinkWifiConnectedLed() {
+  for (uint8_t i = 0; i < 3; i++) {
+    digitalWrite(STATUS_LED_PIN, HIGH);
+    delay(90);
+    digitalWrite(STATUS_LED_PIN, LOW);
+    delay(90);
+  }
+
+  statusLedOff();
 }
 
 // ============================================================
@@ -177,6 +204,7 @@ void connectWiFi() {
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(400);
+    blinkWifiWaitingLed();
     Serial.print(".");
 
     if (millis() - startedAt > 20000) {
@@ -190,6 +218,7 @@ void connectWiFi() {
 
   Serial.println();
   Serial.println("Wi-Fi connected");
+  blinkWifiConnectedLed();
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
   Serial.print("RSSI: ");
@@ -693,6 +722,8 @@ void drawIdleIndicator() {
 void setup() {
   delay(800);
   Serial.begin(115200);
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  statusLedOff();
   random16_add_entropy(static_cast<uint16_t>(esp_random()));
   random16_set_seed(static_cast<uint16_t>(esp_random()));
 

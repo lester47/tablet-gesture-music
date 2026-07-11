@@ -50,6 +50,11 @@ The v5 lightweight update further reduces ESP32 load:
 - Spectrum packets are ignored before JSON parsing if they arrive faster than 100 ms
 - Ripple animations avoid per-pixel `sqrtf()` and use squared-distance checks
 
+The v6 Wi-Fi status LED update uses the ESP32 built-in LED on GPIO 2:
+
+- Wi-Fi not connected: slow continuous blink
+- Wi-Fi connected: quick blink 3 times, then LED off
+
 PlatformIO / VS Code upload:
 
 ```bash

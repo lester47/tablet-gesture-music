@@ -110,3 +110,16 @@ Local private backup:
 
 `success_versions/esp32_v5_lightweight_private/`
 
+## v6 ESP32 Wi-Fi Status LED
+
+Date: 2026-07-11
+
+The ESP32 built-in LED on GPIO 2 now indicates Wi-Fi readiness:
+
+- Wi-Fi not connected: slow continuous blink
+- Wi-Fi connected: quick blink 3 times, then LED off
+
+Local private backup:
+
+`success_versions/esp32_v6_wifi_status_led_private/`
+
