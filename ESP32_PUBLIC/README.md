@@ -36,6 +36,13 @@ The v2 animation engine maps the 9 note events to 9 LED behaviors:
 
 The v3 random-color update keeps the 9 animation behaviors, but assigns a fresh vivid color whenever a new note/mode event arrives. The spectrum bars then continue with the same random color until the next event.
 
+The v4 stability update adds note-event throttling for rapid gesture changes:
+
+- LED refresh interval: 40 ms
+- Minimum accepted note-event interval: 140 ms
+- Note animation max phase: 22 frames
+- Serial color logging avoids dynamic String concatenation
+
 PlatformIO / VS Code upload:
 
 ```bash

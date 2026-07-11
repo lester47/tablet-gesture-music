@@ -68,12 +68,15 @@ uint32_t lastLedFrame = 0;
 uint32_t lastStatusPublish = 0;
 
 constexpr uint32_t SPECTRUM_TIMEOUT_MS = 1800;
-constexpr uint32_t LED_FRAME_INTERVAL_MS = 33;
+constexpr uint32_t LED_FRAME_INTERVAL_MS = 40;
 constexpr uint32_t STATUS_INTERVAL_MS = 5000;
+constexpr uint32_t NOTE_EVENT_MIN_INTERVAL_MS = 140;
+constexpr uint8_t NOTE_ANIMATION_MAX_PHASE = 22;
 
 bool noteBurstActive = false;
 uint8_t noteBurstRadius = 0;
 uint8_t noteBurstBrightness = 0;
+uint16_t skippedNoteEvents = 0;
 
 // ============================================================
 // 16?16 ?耦?拚摨扳?
@@ -255,7 +258,7 @@ void handleSpectrumJson(const JsonDocument& doc) {
 }
 
 void handleNoteJson(const JsonDocument& doc) {
-  currentNote = constrain(
+  uint8_t incomingNote = constrain(
     doc["note"] | 0,
     0,
     9
@@ -270,11 +273,19 @@ void handleNoteJson(const JsonDocument& doc) {
   const char* gesture = doc["gesture"] | "none";
   currentGesture = gesture;
 
+  uint32_t now = millis();
+
+  if (now - lastNotePacket < NOTE_EVENT_MIN_INTERVAL_MS) {
+    skippedNoteEvents++;
+    return;
+  }
+
+  currentNote = incomingNote;
   currentModeColor = randomModeColor();
   noteBurstActive = true;
   noteBurstRadius = 0;
   noteBurstBrightness = map(currentEnergy, 0, 100, 140, 255);
-  lastNotePacket = millis();
+  lastNotePacket = now;
 
   Serial.print("Note event: ");
   Serial.print(currentNote);
@@ -283,7 +294,18 @@ void handleNoteJson(const JsonDocument& doc) {
   Serial.print(" energy=");
   Serial.print(currentEnergy);
   Serial.print(" color=#");
-  Serial.println(String(currentModeColor.r, HEX) + String(currentModeColor.g, HEX) + String(currentModeColor.b, HEX));
+  char colorText[8];
+  snprintf(
+    colorText,
+    sizeof(colorText),
+    "%02X%02X%02X",
+    currentModeColor.r,
+    currentModeColor.g,
+    currentModeColor.b
+  );
+  Serial.print(colorText);
+  Serial.print(" skipped=");
+  Serial.println(skippedNoteEvents);
 }
 
 void mqttCallback(
@@ -636,7 +658,7 @@ void drawNoteBurst() {
 
   noteBurstRadius++;
 
-  if (noteBurstRadius > 30) {
+  if (noteBurstRadius > NOTE_ANIMATION_MAX_PHASE) {
     noteBurstActive = false;
   }
 }

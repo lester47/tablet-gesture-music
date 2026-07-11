@@ -80,3 +80,18 @@ Local private backup:
 
 `success_versions/esp32_v3_random_mode_colors_private/`
 
+## v4 ESP32 Stability Throttle
+
+Date: 2026-07-11
+
+Rapid hand/mode switching could overload the ESP32 LED loop because each note event restarted a full animation and randomized color immediately. The v4 receiver adds throttling and shorter animation bursts:
+
+- LED frame interval changed from 33 ms to 40 ms
+- Note events are accepted at most once every 140 ms
+- Note animations end after 22 phases instead of 30
+- Serial color logging avoids dynamic `String` concatenation
+
+Local private backup:
+
+`success_versions/esp32_v4_stability_throttle_private/`
+
