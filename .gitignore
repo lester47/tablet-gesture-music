@@ -1,0 +1,12 @@
+# Private hardware sketches may contain Wi-Fi credentials.
+ESP32/
+*.local.ino
+
+# Historical working copies kept locally only.
+index_2.html
+index_bak.html
+index_mqtt_added.html
+index_mqttgo_full.html
+index_mqttgo_spectrum_fixed.html
+index_mqttgo_synthetic_spectrum.html
+

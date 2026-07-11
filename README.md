@@ -2,11 +2,14 @@
 
 這是一個適合平板使用的九宮格手勢音樂互動網頁。使用者透過攝影機辨識九種手勢，演奏固定音高的 Do、Re、Mi、Fa、Sol、La、Si、高音 Do、高音 Re，並搭配玻璃、水滴與空靈聲場效果。
 
+目前 v1 成功版已完成整條系統鏈：筆電／iPad／iPhone 從 GitHub Pages 開啟網頁，透過 MQTTGO 傳送音符與頻譜資料到 ESP32，並驅動 WS2812B 16x16 燈板產生即時燈光效果。
+
 ## 正式入口
 
 - `index.html`：正式版主程式，已由最後音準修正版 `index_9_gestures_tuned_pitch.html` 更新而來。
 - `manifest.webmanifest`：PWA 設定，可加入平板主畫面。
 - `sw.js`：Service Worker 快取設定。
+- `VERSION_SUCCESS.md`：v1 成功版的 MQTT、ESP32 與燈板設定紀錄。
 
 ## 手勢與音高
 
@@ -34,4 +37,5 @@
 
 - 不建議直接用 `file:///` 開啟，攝影機權限可能無法正常使用。
 - 若更新後平板仍看到舊版本，請更新 `sw.js` 裡的 `CACHE_NAME`，或清除瀏覽器網站資料。
-- 若要連接 ESP32 與 WS2812 燈板，平板版建議改用 MQTT over WSS / Wi-Fi 架構。
+- v1 成功版使用 MQTTGO：網頁端 `wss://mqttgo.io:8084`，ESP32 端 `mqttgo.io:1883`。
+- ESP32 程式可能包含 Wi-Fi 密碼，請只保存在本機私有備份，不要直接推到公開 GitHub。
