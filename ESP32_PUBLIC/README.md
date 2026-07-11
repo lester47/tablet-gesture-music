@@ -1,6 +1,6 @@
 # ESP32 Public Example
 
-This folder contains a redacted version of the ESP32 WS2812B 16x16 MQTT receiver used by the v1 success baseline.
+This folder contains a redacted version of the ESP32 WS2812B 16x16 MQTT receiver used by the v2 animation-engine baseline.
 
 Before flashing the sketch, replace these placeholders:
 
@@ -21,6 +21,25 @@ The ESP32 sketch uses:
 - LED type: `WS2812B`
 - Matrix: `16x16`
 - Mapping: serpentine
+
+The v2 animation engine maps the 9 note events to 9 LED behaviors:
+
+- Do: center ripple
+- Re: double wave
+- Mi: triple ripple
+- Fa: lightning
+- Sol: full-matrix wave
+- La: heartbeat pulse
+- Si: particle gather
+- High Do: fountain
+- High Re: firework
+
+PlatformIO / VS Code upload:
+
+```bash
+pio run
+pio run --target upload
+```
 
 Do not commit real Wi-Fi passwords or private MQTT credentials.
 

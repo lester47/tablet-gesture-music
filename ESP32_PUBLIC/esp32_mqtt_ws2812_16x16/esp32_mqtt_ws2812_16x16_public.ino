@@ -99,6 +99,12 @@ void drawPixelXY(uint8_t x, uint8_t y, const CRGB& color) {
   }
 }
 
+void addPixelXY(uint8_t x, uint8_t y, const CRGB& color) {
+  if (x < MATRIX_WIDTH && y < MATRIX_HEIGHT) {
+    leds[xy(x, y)] += color;
+  }
+}
+
 void clearMatrix() {
   fill_solid(leds, NUM_LEDS, CRGB::Black);
 }
@@ -117,6 +123,27 @@ CRGB noteColor(uint8_t note) {
     case 8: return CRGB(255, 65, 190);   // 擃 Do嚗?蝝?    case 9: return CRGB(245, 245, 255);  // 擃 Re嚗
     default: return CRGB(80, 170, 255);
   }
+}
+
+CRGB noteColorFixed(uint8_t note) {
+  switch (note) {
+    case 1: return CRGB(255, 45, 45);    // Do
+    case 2: return CRGB(255, 120, 20);   // Re
+    case 3: return CRGB(255, 220, 30);   // Mi
+    case 4: return CRGB(40, 220, 70);    // Fa
+    case 5: return CRGB(20, 210, 230);   // Sol
+    case 6: return CRGB(45, 90, 255);    // La
+    case 7: return CRGB(150, 55, 255);   // Si
+    case 8: return CRGB(255, 65, 190);   // High Do
+    case 9: return CRGB(245, 245, 255);  // High Re
+    default: return CRGB(80, 170, 255);
+  }
+}
+
+CRGB noteEventColor() {
+  CRGB color = noteColorFixed(currentNote);
+  color.nscale8_video(noteBurstBrightness);
+  return color;
 }
 
 // ============================================================
@@ -362,7 +389,7 @@ void drawSpectrum() {
   bool dataFresh =
     millis() - lastSpectrumPacket < SPECTRUM_TIMEOUT_MS;
 
-  CRGB baseColor = noteColor(currentNote);
+  CRGB baseColor = noteColorFixed(currentNote);
 
   for (uint8_t x = 0; x < AUDIO_BANDS; x++) {
     float desired = dataFresh ? targetBands[x] : 0.0f;
@@ -405,35 +432,200 @@ void drawSpectrum() {
 // ============================================================
 // ?喟泵閫貊?郭
 // ============================================================
-void drawNoteBurst() {
-  if (!noteBurstActive) {
-    return;
-  }
-
-  const int8_t centerX = 7;
-  const int8_t centerY = 7;
-  CRGB color = noteColor(currentNote);
-  color.nscale8_video(noteBurstBrightness);
+void drawRippleAt(int8_t centerX, int8_t centerY, uint8_t phase, const CRGB& color) {
+  uint8_t radius = phase / 2;
 
   for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
     for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
       int8_t dx = static_cast<int8_t>(x) - centerX;
       int8_t dy = static_cast<int8_t>(y) - centerY;
-      uint8_t distance =
-        static_cast<uint8_t>(sqrtf(dx * dx + dy * dy));
+      uint8_t distance = static_cast<uint8_t>(sqrtf(dx * dx + dy * dy));
 
-      if (
-        distance == noteBurstRadius ||
-        distance + 1 == noteBurstRadius
-      ) {
-        leds[xy(x, y)] += color;
+      if (distance == radius || distance + 1 == radius) {
+        addPixelXY(x, y, color);
       }
     }
+  }
+}
+
+void drawRipple(uint8_t phase, const CRGB& color) {
+  drawRippleAt(7, 7, phase, color);
+}
+
+void drawDoubleWave(uint8_t phase, const CRGB& color) {
+  uint8_t radius = phase / 2;
+
+  for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
+    for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+      uint8_t leftDistance = abs(static_cast<int>(x) - 3);
+      uint8_t rightDistance = abs(static_cast<int>(x) - 12);
+
+      if (leftDistance == radius || rightDistance == radius) {
+        CRGB c = color;
+        uint8_t yFade = 255 - min<uint8_t>(180, abs(static_cast<int>(y) - 7) * 22);
+        c.nscale8_video(yFade);
+        addPixelXY(x, y, c);
+      }
+    }
+  }
+}
+
+void drawTripleWave(uint8_t phase, const CRGB& color) {
+  drawRippleAt(3, 8, phase, color);
+  drawRippleAt(7, 7, phase + 2, color);
+  drawRippleAt(12, 8, phase + 4, color);
+}
+
+void drawLightning(uint8_t phase, const CRGB& color) {
+  uint8_t offset = (phase / 2) % 4;
+
+  for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+    uint8_t y = 2 + ((x * 3 + offset) % 12);
+    addPixelXY(x, y, color);
+
+    if (y > 0) {
+      CRGB dim = color;
+      dim.nscale8_video(120);
+      addPixelXY(x, y - 1, dim);
+    }
+
+    if (y + 1 < MATRIX_HEIGHT) {
+      CRGB dim = color;
+      dim.nscale8_video(120);
+      addPixelXY(x, y + 1, dim);
+    }
+  }
+}
+
+void drawOceanWave(uint8_t phase, const CRGB& color) {
+  for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+    uint8_t wave = sin8(x * 18 + phase * 12);
+    uint8_t y = map(wave, 0, 255, 3, 12);
+
+    addPixelXY(x, y, color);
+
+    CRGB foam = color;
+    foam.nscale8_video(120);
+    if (y > 0) {
+      addPixelXY(x, y - 1, foam);
+    }
+    if (y + 1 < MATRIX_HEIGHT) {
+      addPixelXY(x, y + 1, foam);
+    }
+  }
+}
+
+void drawHeartbeat(uint8_t phase, const CRGB& color) {
+  uint8_t beat = phase % 16;
+  uint8_t halfSize =
+    (beat < 3 || (beat >= 7 && beat < 10)) ? 5 :
+    (beat < 5 || (beat >= 10 && beat < 12)) ? 3 :
+    1;
+
+  for (uint8_t y = 7 - halfSize; y <= 8 + halfSize && y < MATRIX_HEIGHT; y++) {
+    for (uint8_t x = 7 - halfSize; x <= 8 + halfSize && x < MATRIX_WIDTH; x++) {
+      CRGB c = color;
+      uint8_t edge = max<uint8_t>(abs(static_cast<int>(x) - 7), abs(static_cast<int>(y) - 7));
+      c.nscale8_video(255 - edge * 26);
+      addPixelXY(x, y, c);
+    }
+  }
+}
+
+void drawParticleGather(uint8_t phase, const CRGB& color) {
+  uint8_t progress = min<uint16_t>(255, phase * 10);
+
+  for (uint8_t i = 0; i < 28; i++) {
+    uint8_t sx = (i * 5 + 2) % MATRIX_WIDTH;
+    uint8_t sy = (i % 4 == 0) ? 0 : ((i % 4 == 1) ? 15 : ((i * 7) % MATRIX_HEIGHT));
+    uint8_t tx = 6 + (i % 4);
+    uint8_t ty = 6 + ((i / 4) % 4);
+
+    uint8_t x = (sx * (255 - progress) + tx * progress) / 255;
+    uint8_t y = (sy * (255 - progress) + ty * progress) / 255;
+
+    addPixelXY(x, y, color);
+  }
+}
+
+void drawFountain(uint8_t phase, const CRGB& color) {
+  for (uint8_t i = 0; i < 24; i++) {
+    uint8_t age = (phase * 2 + i * 5) % 32;
+    int8_t x = 7 + ((i % 7) - 3) * age / 10;
+    int8_t y = 15 - age / 2;
+
+    if (x >= 0 && x < MATRIX_WIDTH && y >= 0 && y < MATRIX_HEIGHT) {
+      CRGB c = color;
+      c.nscale8_video(255 - min<uint8_t>(180, age * 6));
+      addPixelXY(x, y, c);
+    }
+  }
+}
+
+void drawFirework(uint8_t phase, const CRGB& color) {
+  if (phase < 10) {
+    uint8_t y = 15 - phase;
+    addPixelXY(7, y, color);
+    addPixelXY(8, y, color);
+    return;
+  }
+
+  uint8_t burstPhase = phase - 10;
+  drawRippleAt(7, 6, burstPhase, color);
+
+  for (uint8_t i = 0; i < 20; i++) {
+    uint8_t sparkleX = (i * 7 + burstPhase * 3) % MATRIX_WIDTH;
+    uint8_t sparkleY = (i * 11 + burstPhase * 5) % MATRIX_HEIGHT;
+
+    if (((sparkleX + sparkleY + burstPhase) % 5) == 0) {
+      addPixelXY(sparkleX, sparkleY, color);
+    }
+  }
+}
+
+void drawNoteBurst() {
+  if (!noteBurstActive) {
+    return;
+  }
+
+  CRGB color = noteEventColor();
+
+  switch (currentNote) {
+    case 1:
+      drawRipple(noteBurstRadius, color);
+      break;
+    case 2:
+      drawDoubleWave(noteBurstRadius, color);
+      break;
+    case 3:
+      drawTripleWave(noteBurstRadius, color);
+      break;
+    case 4:
+      drawLightning(noteBurstRadius, color);
+      break;
+    case 5:
+      drawOceanWave(noteBurstRadius, color);
+      break;
+    case 6:
+      drawHeartbeat(noteBurstRadius, color);
+      break;
+    case 7:
+      drawParticleGather(noteBurstRadius, color);
+      break;
+    case 8:
+      drawFountain(noteBurstRadius, color);
+      break;
+    case 9:
+      drawFirework(noteBurstRadius, color);
+      break;
+    default:
+      drawRipple(noteBurstRadius, color);
+      break;
   }
 
   noteBurstRadius++;
 
-  if (noteBurstRadius > 12) {
+  if (noteBurstRadius > 30) {
     noteBurstActive = false;
   }
 }

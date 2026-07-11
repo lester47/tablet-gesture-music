@@ -46,3 +46,27 @@ The hardware sketch contains Wi-Fi credentials, so the exact ESP32 success sketc
 
 Do not publish private Wi-Fi credentials to GitHub.
 
+## v2 ESP32 Animation Engine
+
+Date: 2026-07-11
+
+The ESP32 LED receiver was upgraded from one shared note burst effect to 9 note-specific LED animations:
+
+- Do: center ripple
+- Re: double wave
+- Mi: triple ripple
+- Fa: lightning
+- Sol: full-matrix wave
+- La: heartbeat pulse
+- Si: particle gather
+- High Do: fountain
+- High Re: firework
+
+Local private backup:
+
+`success_versions/esp32_v2_animation_engine_private/`
+
+Public redacted example:
+
+`ESP32_PUBLIC/esp32_mqtt_ws2812_16x16/`
+
