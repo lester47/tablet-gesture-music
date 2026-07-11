@@ -95,3 +95,18 @@ Local private backup:
 
 `success_versions/esp32_v4_stability_throttle_private/`
 
+## v5 ESP32 Lightweight Load Reduction
+
+Date: 2026-07-11
+
+The ESP32 receiver was further optimized to reduce LED and MQTT workload:
+
+- LED frame interval changed from 40 ms to 50 ms
+- Status publish interval changed from 5 seconds to 8 seconds
+- Spectrum packets arriving faster than 100 ms are ignored before JSON parsing
+- Ripple-style animations avoid per-pixel `sqrtf()` and use squared-distance checks
+
+Local private backup:
+
+`success_versions/esp32_v5_lightweight_private/`
+

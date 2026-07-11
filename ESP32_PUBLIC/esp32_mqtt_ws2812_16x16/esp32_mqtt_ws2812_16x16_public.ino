@@ -68,8 +68,9 @@ uint32_t lastLedFrame = 0;
 uint32_t lastStatusPublish = 0;
 
 constexpr uint32_t SPECTRUM_TIMEOUT_MS = 1800;
-constexpr uint32_t LED_FRAME_INTERVAL_MS = 40;
-constexpr uint32_t STATUS_INTERVAL_MS = 5000;
+constexpr uint32_t LED_FRAME_INTERVAL_MS = 50;
+constexpr uint32_t STATUS_INTERVAL_MS = 8000;
+constexpr uint32_t SPECTRUM_PACKET_MIN_INTERVAL_MS = 100;
 constexpr uint32_t NOTE_EVENT_MIN_INTERVAL_MS = 140;
 constexpr uint8_t NOTE_ANIMATION_MAX_PHASE = 22;
 
@@ -313,6 +314,14 @@ void mqttCallback(
   byte* payload,
   unsigned int length
 ) {
+  if (strcmp(topic, TOPIC_SPECTRUM) == 0) {
+    uint32_t now = millis();
+
+    if (now - lastSpectrumPacket < SPECTRUM_PACKET_MIN_INTERVAL_MS) {
+      return;
+    }
+  }
+
   StaticJsonDocument<768> doc;
 
   DeserializationError error =
@@ -467,14 +476,16 @@ void drawSpectrum() {
 // ============================================================
 void drawRippleAt(int8_t centerX, int8_t centerY, uint8_t phase, const CRGB& color) {
   uint8_t radius = phase / 2;
+  uint16_t inner = radius > 0 ? (radius - 1) * (radius - 1) : 0;
+  uint16_t outer = (radius + 1) * (radius + 1);
 
   for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
     for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
       int8_t dx = static_cast<int8_t>(x) - centerX;
       int8_t dy = static_cast<int8_t>(y) - centerY;
-      uint8_t distance = static_cast<uint8_t>(sqrtf(dx * dx + dy * dy));
+      uint16_t distanceSquared = dx * dx + dy * dy;
 
-      if (distance == radius || distance + 1 == radius) {
+      if (distanceSquared >= inner && distanceSquared <= outer) {
         addPixelXY(x, y, color);
       }
     }

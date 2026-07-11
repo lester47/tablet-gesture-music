@@ -43,6 +43,13 @@ The v4 stability update adds note-event throttling for rapid gesture changes:
 - Note animation max phase: 22 frames
 - Serial color logging avoids dynamic String concatenation
 
+The v5 lightweight update further reduces ESP32 load:
+
+- LED refresh interval: 50 ms
+- Status publish interval: 8 seconds
+- Spectrum packets are ignored before JSON parsing if they arrive faster than 100 ms
+- Ripple animations avoid per-pixel `sqrtf()` and use squared-distance checks
+
 PlatformIO / VS Code upload:
 
 ```bash
